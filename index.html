@@ -22,14 +22,14 @@
         }).addTo(map);
 
         // 3. Muat data Jalan
-        fetch('jalan_balikpapan.geojson')
+        fetch('data_web/jalan_balikpapan.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, { style: {color: "#999", weight: 2} }).addTo(map);
             });
 
         // 4. Muat data POI
-        fetch('poi_balikpapan.geojson')
+        fetch('data_web/poi_balikpapan.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {
@@ -40,7 +40,7 @@
                     }
                 }).addTo(map);
             });
-        fetch('rute_optimal_final.geojson')
+        fetch('out/rute_optimal_final.geojson')
             .then(response => response.json())
             .then(data => {
                 L.geoJSON(data, {

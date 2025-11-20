@@ -59,11 +59,27 @@ def my_astar(G, source, target, heuristic, weight='length'):
         
         return float('inf'), []
 
+def permutations(elements):
+    if len(elements) == 1:
+        return [elements]
+    
+    result = []
+
+    for i in range(len(elements)):
+        current_elements = elements[i]
+
+        remaining_elements = elements[:i] + elements[i+1:]
+
+        for p in permutations(remaining_elements):
+            result.append([current_elements] + p)
+    
+    return result
+
 def main():
     
     print("Memuat graph dari file lokal...")
     try:
-        G = ox.load_graphml("balikpapan_jalan.graphml")
+        G = ox.load_graphml("data/balikpapan_jalan.graphml")
     except FileNotFoundError:
         print("Error: File 'balikpapan_jalan.graphml' tidak ditemukan.")
         print("Pastikan Anda sudah menjalankan skrip download terlebih dahulu.")
@@ -71,7 +87,7 @@ def main():
 
     print("Memuat POI dari file lokal...")
     try:
-        pois = gpd.read_file("balikpapan_pois.gpkg")
+        pois = gpd.read_file("data/balikpapan_pois.gpkg")
     except Exception as e:
         print(f"Error: File 'balikpapan_pois.gpkg' tidak ditemukan atau error. {e}")
         return
@@ -167,17 +183,20 @@ def main():
     best_order = []
 
     # TO MODIFY
-    for permutations in itertools.permutations(dest_nodes):
+
+    all_possible_orders = permutations(dest_nodes)
+
+    for p in all_possible_orders:
         current_dist = 0
         current_node = start_node # Mulai dari G
         
-        for next_node in permutations:
+        for next_node in p:
             current_dist += distances[current_node][next_node]
             current_node = next_node
         
         if current_dist < shortest_total_dist:
             shortest_total_dist = current_dist
-            best_order = permutations
+            best_order = p
 
     best_path_nodes_order = [start_node] + list(best_order)
 
@@ -224,7 +243,7 @@ def main():
 
     full_route_gdf_web = full_route_gdf.to_crs("EPSG:4326")
 
-    output_geojson = "rute_optimal_final.geojson"
+    output_geojson = "out/rute_optimal_final.geojson"
     full_route_gdf_web.to_file(output_geojson, driver="GeoJSON")
 
     print(f"Selesai! File '{output_geojson}' siap untuk divisualisasikan di web.")
