@@ -1,63 +1,55 @@
 import osmnx as ox
 import geopandas as gpd
-import itertools #masih bisa di ganti pakai pendekatan manual
 import heapq
 import math
 from collections import defaultdict
 
 def my_astar(G, source, target, heuristic, weight='length'):
-        # --- Fungsi nested untuk membangun ulang rute ---
-        def reconstruct_path(current):
-            path = [current]
-            while current in came_from:
-                current = came_from[current]
-                path.append(current)
-            path.reverse()
-            return path
-        # -----------------------------------------------
-
-        # 1. Inisialisasi
-        open_set = []
-        heapq.heappush(open_set, (heuristic(source, target), source)) 
+    # --- Fungsi nested untuk membangun ulang rute ---
+    def reconstruct_path(current):
+        path = [current]
+        while current in came_from:
+            current = came_from[current]
+            path.append(current)
+        path.reverse()
+        return path
+    # -----------------------------------------------
+    # 1. Inisialisasi
+    open_set = []
+    heapq.heappush(open_set, (heuristic(source, target, G), source)) 
+    
+    came_from = {}
+    
+    g_score = defaultdict(lambda: float('inf'))
+    g_score[source] = 0
+    # 2. Mulai Loop
+    while open_set:
         
-        came_from = {}
-        
-        g_score = defaultdict(lambda: float('inf'))
-        g_score[source] = 0
-
-        # 2. Mulai Loop
-        while open_set:
+        _current_f_score, current = heapq.heappop(open_set)
+        # 3. Cek Tujuan
+        if current == target:
+            path = reconstruct_path(current)
+            total_length = g_score[target]
+            return total_length, path # <--- Return sukses
+        # 4. Eksplorasi Tetangga
+        for neighbor, edge_data_dict in G.adj[current].items():
             
-            _current_f_score, current = heapq.heappop(open_set)
-
-            # 3. Cek Tujuan
-            if current == target:
-                path = reconstruct_path(current)
-                total_length = g_score[target]
-                return total_length, path # <--- Return sukses
-
-            # 4. Eksplorasi Tetangga
-            for neighbor, edge_data_dict in G.adj[current].items():
-                
-                # Handle MultiDiGraph (ambil bobot terendah antar node yang sama)
-                cost = float('inf')
-                if G.is_multigraph():
-                    cost = min(data.get(weight, float('inf')) for data in edge_data_dict.values())
-                else:
-                    cost = edge_data_dict.get(weight, float('inf'))
-
-                if cost == float('inf'):
-                    continue 
-
-                tentative_g_score = g_score[current] + cost
-
-                if tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score = tentative_g_score + heuristic(neighbor, target)
-                    heapq.heappush(open_set, (f_score, neighbor))
-        
-        return float('inf'), []
+            # Handle MultiDiGraph (ambil bobot terendah antar node yang sama)
+            cost = float('inf')
+            if G.is_multigraph():
+                cost = min(data.get(weight, float('inf')) for data in edge_data_dict.values())
+            else:
+                cost = edge_data_dict.get(weight, float('inf'))
+            if cost == float('inf'):
+                continue 
+            tentative_g_score = g_score[current] + cost
+            if tentative_g_score < g_score[neighbor]:
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g_score
+                f_score = tentative_g_score + heuristic(neighbor, target, G)
+                heapq.heappush(open_set, (f_score, neighbor))
+    
+    return float('inf'), []
 
 def permutations(elements):
     if len(elements) == 1:
@@ -74,6 +66,31 @@ def permutations(elements):
             result.append([current_elements] + p)
     
     return result
+
+def heuristic_dist(u, v, G):
+        node_u_data = G.nodes[u]
+        node_v_data = G.nodes[v]
+
+        lat1, lon1 = node_u_data['y'], node_u_data['x']
+        lat2, lon2 = node_v_data['y'], node_v_data['x']
+
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+
+        #haversine
+        a = (math.sin(delta_phi / 2) ** 2 +
+             math.cos(phi1) * math.cos(phi2) *
+             math.sin(delta_lambda / 2) ** 2)
+
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        R = 6371000
+
+        distance = R * c
+
+        return distance
 
 def main():
     
@@ -132,31 +149,6 @@ def main():
 
     
     print("\nMengecek sistem koordinat graf untuk A*...")
-
-    def heuristic_dist(u, v):
-        node_u_data = G.nodes[u]
-        node_v_data = G.nodes[v]
-
-        lat1, lon1 = node_u_data['y'], node_u_data['x']
-        lat2, lon2 = node_v_data['y'], node_v_data['x']
-
-        phi1 = math.radians(lat1)
-        phi2 = math.radians(lat2)
-        delta_phi = math.radians(lat2 - lat1)
-        delta_lambda = math.radians(lon2 - lon1)
-
-        #haversine
-        a = (math.sin(delta_phi / 2) ** 2 +
-             math.cos(phi1) * math.cos(phi2) *
-             math.sin(delta_lambda / 2) ** 2)
-
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-        R = 6371000
-
-        distance = R * c
-
-        return distance
 
     nodes_to_calc = [start_node] + dest_nodes
 
