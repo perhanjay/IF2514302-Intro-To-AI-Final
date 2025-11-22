@@ -32,7 +32,7 @@
 <body>
 
 <div id="sidebar">
-    <h2>🗺️ Rute Wisata A*</h2>
+    <h2>🗺️ Pencari Rute Wisata</h2>
     <p style="font-size: 0.9em; color: #666;">Pilih titik lewat peta atau pencarian.</p>
 
     <div class="control-group">
@@ -41,12 +41,12 @@
     </div>
 
     <div class="control-group">
-        <label>🏖️ Destinasi (Multi-tujuan)</label>
+        <label>🏖️ Destinasi</label>
         <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
     </div>
 
-    <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
-    <div id="loading" class="loading">⏳ Sedang menghitung A*...</div>
+    <button id="btn-cari" onclick="hitungRute()">Temukan Rute Perjalanan</button>
+    <div id="loading" class="loading">Menghitung rute...</div>
 
     <div id="result-card">
         <h3 style="margin:0 0 10px 0;">Hasil Perhitungan</h3>
@@ -210,7 +210,7 @@
             document.getElementById('result-card').style.display = 'block';
             document.getElementById('result-content').innerHTML = `
                 <div><b>Total Jarak:</b> ${data.total_km} KM</div>
-                <div style="font-size:0.9em; margin-top:5px; color:#666;">Rute optimal mencakup ${destIds.length} tempat wisata.</div>
+                <div style="font-size:0.9em; margin-top:5px; color:#666;">Rute mencakup ${destIds.length} tempat wisata.</div>
             `;
         })
         .catch(err => {

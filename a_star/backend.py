@@ -128,8 +128,8 @@ def load_data_initial():
         path_pois = "data/balikpapan_pois.gpkg"
         
         # Fallback jika tidak ada folder data (untuk kemudahan)
-        if not os.path.exists(path_graph): path_graph = "balikpapan_jalan.graphml"
-        if not os.path.exists(path_pois): path_pois = "balikpapan_pois.gpkg"
+        # if not os.path.exists(path_graph): path_graph = "balikpapan_jalan.graphml"
+        # if not os.path.exists(path_pois): path_pois = "balikpapan_pois.gpkg"
 
         G = ox.load_graphml(path_graph)
         pois = gpd.read_file(path_pois)
@@ -151,7 +151,8 @@ def get_pois_for_frontend(pois_gdf):
     
     results = []
     # Filter hanya yang punya nama
-    valid_pois = pois_gdf[pois_gdf['name'].notna()]
+    # valid_pois = pois_gdf[pois_gdf['name'].notna()]
+    valid_pois = pois_gdf
     
     for idx, row in valid_pois.iterrows():
         results.append({
