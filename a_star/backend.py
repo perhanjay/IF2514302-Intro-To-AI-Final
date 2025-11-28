@@ -165,30 +165,38 @@ def get_pois_for_frontend(pois_gdf):
 
 def solve_tour(G, pois, start_id, dest_ids):
     """
-    Fungsi inti untuk menghitung rute wisata.
-    Input: G (Graph), pois (GeoDF), start_id (int), dest_ids (list of int)
-    Output: Dictionary berisi GeoJSON rute final & total jarak.
+    [HYBRID VERSION - FIXED]
+    Algoritma: TETAP MANUAL (Permutations & A* buatan sendiri).
+    Perbaikan: Memastikan output sequence_ids berisi POI ID (bukan Node ID)
+    agar nama tempat muncul di website.
     """
     print(f"🚀 [Backend] Menghitung rute untuk Start ID: {start_id}, Dest IDs: {dest_ids}")
     
     try:
-        # 1. Ambil Geometri dari ID
+        # --- BAGIAN 1: MAPPING POI ID KE NODE ID ---
+        # Kita perlu tahu: POI ID '5' itu letaknya di Node Graph '2394823' yang mana?
+        
+        # 1. Ambil geometri
         start_point = pois.iloc[start_id].geometry
         dest_points = pois.iloc[dest_ids].geometry
-        
         all_points = [start_point] + list(dest_points)
         
         # 2. Snap ke Node Graph
         all_lons = [p.x for p in all_points]
         all_lats = [p.y for p in all_points]
-        
         raw_nodes = ox.nearest_nodes(G, X=all_lons, Y=all_lats)
         all_nodes = [int(n) for n in raw_nodes]
         
         start_node = all_nodes[0]
         dest_nodes = all_nodes[1:]
         
-        # 3. Hitung Matriks Jarak (Pairwise) menggunakan my_astar
+        # 3. Buat Kamus: POI_ID -> NODE_ID
+        # Agar nanti saat permutasi POI_ID, kita bisa cek jaraknya pakai NODE_ID
+        poi_to_node = {start_id: start_node}
+        for pid, nid in zip(dest_ids, dest_nodes):
+            poi_to_node[pid] = nid
+            
+        # --- BAGIAN 2: HITUNG MATRIKS JARAK (TIDAK BERUBAH) ---
         nodes_to_calc = [start_node] + dest_nodes
         distances = {}
         
@@ -198,84 +206,105 @@ def solve_tour(G, pois, start_id, dest_ids):
                 if u == v:
                     distances[u][v] = 0
                     continue
-                
-                # Panggil A* kustom
                 length, path = my_astar(G, source=u, target=v, heuristic=heuristic_dist, weight='length')
-                
-                if not path:
-                    distances[u][v] = float('inf')
-                else:
-                    distances[u][v] = length
+                distances[u][v] = length if path else float('inf')
 
-        # 4. TSP Solver (Permutations manual)
-        shortest_total_dist = float('inf')
-        best_order = []
-        
-        # Panggil fungsi permutasi kustom
-        all_possible_orders = permutations(dest_nodes)
+        # --- BAGIAN 3: TSP SOLVER (PERBAIKAN DI SINI) ---
+        # YANG KITA ACAK ADALAH "DEST_IDS" (POI ID), BUKAN NODE ID.
+        all_candidates = []
+        all_possible_orders = permutations(dest_ids) # <-- Mengacak ID Tempat
         
         for p in all_possible_orders:
             current_dist = 0
-            current_node = start_node
+            current_poi = start_id
             valid_path = True
             
-            for next_node in p:
-                d = distances[current_node][next_node]
+            for next_poi in p:
+                # Ambil Node ID dari kamus yang kita buat tadi
+                u_node = poi_to_node[current_poi]
+                v_node = poi_to_node[next_poi]
+                
+                d = distances[u_node][v_node]
                 if d == float('inf'):
                     valid_path = False
                     break
                 current_dist += d
-                current_node = next_node
+                current_poi = next_poi
             
-            if valid_path and current_dist < shortest_total_dist:
-                shortest_total_dist = current_dist
-                best_order = p
+            if valid_path:
+                all_candidates.append({
+                    "order": p, # Ini isinya sekarang POI ID (benar!)
+                    "total_dist": current_dist
+                })
         
-        if shortest_total_dist == float('inf'):
+        if not all_candidates:
             return {"error": "Rute terputus/tidak ditemukan."}
 
-        # 5. Rekonstruksi Jalur Penuh (Full Path) untuk Visualisasi
-        best_path_nodes_order = [start_node] + list(best_order)
-        full_route_edges = []
+        # --- BAGIAN 4: FORMATTING OUTPUT ---
+        all_candidates.sort(key=lambda x: x['total_dist'])
+        top_routes = all_candidates[:3] 
         
-        for i in range(len(best_path_nodes_order) - 1):
-            u = best_path_nodes_order[i]
-            v = best_path_nodes_order[i+1]
+        final_results = []
+
+        for idx, route_data in enumerate(top_routes):
+            best_order = route_data['order'] # List POI ID
+            total_dist = route_data['total_dist']
             
-            _, route_segment = my_astar(G, source=u, target=v, heuristic=heuristic_dist, weight='length')
+            features = []
+            path_sequence = [start_id] + list(best_order) # List POI ID lengkap
             
-            if route_segment:
-                # Convert list of nodes to list of edges (u, v, key)
-                # Key=0 aman untuk simplified graph
-                for k in range(len(route_segment)-1):
-                    full_route_edges.append((route_segment[k], route_segment[k+1], 0))
+            # Estimasi Waktu (Asumsi 30 km/jam = 8.33 m/s)
+            avg_speed_mps = 8.33 
+            total_seconds = total_dist / avg_speed_mps
+            
+            # Rekonstruksi Jalur Fisik (Perlu lookup Node ID lagi)
+            full_poi_path = [start_id] + list(best_order)
+            
+            for i in range(len(full_poi_path) - 1):
+                u_poi = full_poi_path[i]
+                v_poi = full_poi_path[i+1]
+                
+                u_node = poi_to_node[u_poi]
+                v_node = poi_to_node[v_poi]
+                
+                _, segment_nodes = my_astar(G, source=u_node, target=v_node, heuristic=heuristic_dist)
+                
+                if segment_nodes:
+                    coords = []
+                    for node_id in segment_nodes:
+                        n_data = G.nodes[node_id]
+                        coords.append([n_data['x'], n_data['y']])
+                    
+                    features.append({
+                        "type": "Feature",
+                        "properties": {
+                            "segment_index": i,
+                            "from_node": int(u_node),
+                            "to_node": int(v_node)
+                        },
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": coords
+                        }
+                    })
 
-        if not full_route_edges:
-            return {"error": "Gagal membuat visualisasi rute."}
+            final_results.append({
+                "rank": idx + 1,
+                "total_km": round(total_dist / 1000, 2),
+                "est_time_min": round(total_seconds / 60),
+                "sequence_ids": path_sequence, # Sekarang ini isinya benar (POI ID)
+                "geojson": {
+                    "type": "FeatureCollection",
+                    "features": features
+                }
+            })
 
-        # 6. Buat GeoJSON Output
-        G_route = G.edge_subgraph(full_route_edges).copy()
-        full_route_gdf = ox.graph_to_gdfs(G_route, nodes=False, edges=True)
-        
-        # Pastikan CRS Lat/Lon
-        # Cek CRS graph original
-        if not full_route_gdf.crs:
-            full_route_gdf.set_crs("EPSG:4326", inplace=True) # Asumsi
-        else:
-            full_route_gdf = full_route_gdf.to_crs("EPSG:4326")
-
-        # Return Dictionary untuk Flask
-        return {
-            "geojson": json.loads(full_route_gdf.to_json()),
-            "total_km": round(shortest_total_dist / 1000, 2),
-            "sequence_ids": [start_id] + dest_ids # Urutan ID POI yang dikunjungi
-        }
+        return {"routes": final_results}
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
-
 # ==========================================
 # 3. MAIN (UNTUK TESTING MANUAL)
 # ==========================================
