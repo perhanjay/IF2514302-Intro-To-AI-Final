@@ -9,24 +9,35 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
         /* --- 1. LAYOUT UTAMA --- */
-        body { display: flex; margin: 0; padding: 0; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #f8f9fa; }
-        
+        body { 
+            display: flex; margin: 0; padding: 0; height: 100vh; overflow: hidden; 
+            font-family: 'Poppins', sans-serif; /* Ganti font disini */
+            background-color: #f4f7f6; 
+            color: #333;
+        }
+
         #sidebar { 
-            width: 380px; /* Sedikit diperlebar agar lega */
+            width: 400px; /* Sedikit diperlebar agar lega */
             height: 100%; 
-            background: white; 
+            background: #ffffff; 
             z-index: 1000; 
             padding: 20px; 
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1); 
-            transition: transform 0.3s ease; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05); 
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
             position: relative; 
             overflow-y: auto; 
             box-sizing: border-box; 
         }
         
+        h2 { 
+            margin-top: 0; color: #2c3e50; font-size: 1.5rem; font-weight: 700; 
+            letter-spacing: -0.5px; margin-bottom: 25px; 
+        }
+
         #map { flex-grow: 1; height: 100%; transition: margin-left 0.3s ease; z-index: 1; }
 
         /* --- 2. TOMBOL TOGGLE SIDEBAR --- */
@@ -49,21 +60,112 @@
         /* --- 4. STYLE FORM --- */
         h2 { margin-top: 0; color: #2c3e50; font-size: 1.4rem; font-weight: 700; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; }
         .control-group { margin-bottom: 15px; }
-        .control-group label { display: block; margin-bottom: 6px; font-weight: 600; color: #34495e; font-size: 0.95rem; }
         
-        .form-select { 
-            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; 
-            font-size: 14px; background: white; outline: none; transition: border 0.2s;
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
         }
-        .form-select:focus { border-color: #3498db; }
+        
+        /* --- HARMONISASI DROPDOWN (ALGORITMA vs TOMSELECT) --- */
+
+        /* 1. Reset Dasar untuk Semua Input Dropdown */
+        .form-select, .ts-control {
+            width: 100%;
+            min-height: 48px; /* Pastikan tingginya sama persis */
+            padding: 10px 15px; /* Padding identik */
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px; /* Sudut membulat sama */
+            box-sizing: border-box; /* Agar padding tidak menambah lebar */
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 2. Styling Khusus Dropdown Algoritma (Select Standar) */
+        .form-select { 
+            appearance: none; /* Hilangkan style bawaan browser */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            outline: none;
+            cursor: pointer;
+            
+            /* Ikon Panah Kustom (Mirip TomSelect) */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233498db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px; /* Beri ruang untuk ikon panah */
+        }
+
+        /* Efek Focus (Glow Biru) - Disamakan */
+        .form-select:focus, .ts-control.focus {
+            border-color: #3498db !important;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15) !important;
+        }
+
+        /* 3. Penyesuaian Paksa untuk TomSelect agar menuruti CSS di atas */
+        .ts-control {
+            display: flex !important;
+            align-items: center !important;
+            box-shadow: none !important;
+            padding-right: 35px !important; /* Ruang untuk panah bawaan TomSelect */
+        }
+        
+        /* Input teks di dalam TomSelect */
+        .ts-control > input {
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 14px !important;
+            color: #333 !important;
+        }
+
+        /* Item yang dipilih (Chip Biru) */
+        .ts-wrapper.multi .ts-control > div {
+            background: #f0f9ff !important;
+            color: #2980b9 !important;
+            border: 1px solid #bde0fe !important;
+            border-radius: 6px !important;
+            padding: 3px 10px !important;
+            margin-right: 5px !important;
+        }
+
+        /* Dropdown Menu yang muncul saat diklik */
+        .ts-dropdown {
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            border: 1px solid #f0f0f0 !important;
+            margin-top: 8px !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            z-index: 2000 !important;
+        }
+        
+        .ts-dropdown .option {
+            padding: 12px 15px !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+        }
+        
+        .ts-dropdown .active {
+            background-color: #f8f9fa !important;
+            color: #3498db !important;
+            font-weight: 600 !important;
+        }
 
         #btn-cari { 
-            width: 100%; padding: 12px; background-color: #3498db; color: white; 
-            border: none; border-radius: 6px; font-size: 16px; font-weight: 600; 
-            cursor: pointer; transition: background 0.2s, transform 0.1s; margin-top: 10px; 
-            box-shadow: 0 2px 5px rgba(52, 152, 219, 0.3);
+            width: 100%; padding: 14px; 
+            background: linear-gradient(135deg, #3498db, #2980b9); /* Gradasi warna */
+            color: white; border: none; border-radius: 12px; 
+            font-size: 16px; font-weight: 600; cursor: pointer; 
+            transition: all 0.3s ease; margin-top: 15px; 
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
         }
-        #btn-cari:hover { background-color: #2980b9; }
+        #btn-cari:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(52, 152, 219, 0.3); }
         #btn-cari:active { transform: scale(0.98); }
 
         .loading { display: none; text-align: center; margin: 15px 0; color: #7f8c8d; font-style: italic; font-size: 0.9rem; }
@@ -73,31 +175,110 @@
         
         .route-card {
             display: flex; justify-content: space-between; align-items: center;
-            background: white; border: 1px solid #eee; border-radius: 8px;
-            padding: 12px 15px; margin-bottom: 10px; cursor: pointer;
-            transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            background: white; border: 1px solid #f0f0f0; border-radius: 12px;
+            padding: 15px 20px; margin-bottom: 12px; cursor: pointer;
+            transition: all 0.2s ease; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); /* Shadow tipis */
         }
         
-        .compare-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
-        .compare-table th { background: #f1f2f6; padding: 8px; text-align: center; border: 1px solid #ddd; color: #333; }
-        .compare-table td { padding: 8px; text-align: center; border: 1px solid #ddd; }
-        .winner { background-color: #d4edda; color: #155724; font-weight: bold; border-color: #c3e6cb; }
-        .winner::after { content: " 🏆"; } /* Ikon piala otomatis */
+        .compare-table { 
+            width: 100%; 
+            border-collapse: separate; /* Penting agar border-radius bekerja */
+            border-spacing: 0; 
+            margin-top: 15px; 
+            font-size: 0.95rem; 
+            background: white;
+            border-radius: 12px; /* Sudut membulat konsisten */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Shadow lembut */
+            overflow: hidden; /* Agar anak elemen tidak menembus sudut bulat */
+            border: 1px solid #f0f0f0;
+        }
 
-        .route-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.08); border-color: #3498db; }
+        /* Header Tabel */
+        .compare-table th { 
+            background: #f8f9fa; /* Warna abu muda modern */
+            padding: 15px; 
+            text-align: center; 
+            color: #2c3e50;
+            font-weight: 600;
+            border-bottom: 2px solid #eaeaea;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Sel Data */
+        .compare-table td { 
+            padding: 15px; 
+            text-align: center; 
+            border-bottom: 1px solid #f0f0f0;
+            color: #555;
+        }
+
+        /* Baris terakhir tidak perlu garis bawah */
+        .compare-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Efek Hover pada Baris */
+        .compare-table tbody tr:hover {
+            background-color: #fcfcfc;
+        }
+
+        /* --- HIGHLIGHT PEMENANG (WINNER) --- */
+        .winner { 
+            background-color: #e6fffa !important; /* Hijau mint lembut */
+            color: #00b894; /* Teks hijau modern */
+            font-weight: 700; 
+            position: relative;
+        }
         
-        /* State Aktif */
+        /* Menambah ikon piala kecil secara otomatis */
+        .winner::before {
+            content: "✨";
+            margin-right: 5px;
+            font-size: 1.1em;
+        }
+
+        .route-card:hover { 
+            border-color: #3498db; transform: translateY(-3px); 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.05); 
+        }
         .route-card.active {
-            background-color: #ebf5fb; 
+            background-color: #f0f9ff; 
             border: 1px solid #3498db;
-            border-left: 5px solid #3498db; /* Aksen kiri */
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
         }
 
         .route-info h4 { margin: 0; font-size: 1rem; color: #2c3e50; }
         .route-info p { margin: 3px 0 0 0; font-size: 0.85rem; color: #7f8c8d; }
         .route-meta { text-align: right; }
-        .route-dist { font-size: 1.1rem; font-weight: bold; color: #27ae60; display: block; }
+        .route-dist { font-size: 1.2rem; font-weight: 700; color: #27ae60; }
         .route-time { font-size: 0.85rem; color: #e67e22; font-weight: 600; }
+
+        .timeline-box { margin-top: 25px; padding-left: 10px; }
+    
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            padding-bottom: 25px;
+            border-left: 2px solid #e0e0e0; /* Garis vertikal */
+        }
+        .timeline-item:last-child { border-left: none; padding-bottom: 0; }
+        
+        .timeline-marker {
+            position: absolute; left: -9px; top: 0;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #fff; border: 3px solid #bdc3c7;
+            box-shadow: 0 0 0 2px white;
+        }
+        
+        /* Warna marker berbeda untuk Start (Merah) & Tujuan (Biru) */
+        .timeline-item.start .timeline-marker { border-color: #e74c3c; background: #e74c3c; }
+        .timeline-item.dest .timeline-marker { border-color: #3498db; background: #3498db; }
+        
+        .timeline-content h4 { margin: 0 0 4px 0; font-size: 0.9rem; color: #7f8c8d; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .timeline-content p { margin: 0; font-size: 1rem; font-weight: 600; color: #2c3e50; }
 
         /* Style List Urutan */
         .itinerary-box { background: #fafafa; border-radius: 8px; padding: 15px; margin-top: 15px; border: 1px solid #eee; }
@@ -106,7 +287,19 @@
         .itinerary-list li b { color: #333; }
 
         /* --- 6. LEAFLET CONTROL FIX --- */
-        .leaflet-top.leaflet-left { margin-top: 70px; }
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+            font-family: 'Poppins', sans-serif !important;
+        }
+        .leaflet-popup-content {
+            margin: 15px !important;
+            font-size: 13px !important;
+            color: #2c3e50;
+        }
+        .leaflet-popup-tip {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+        }
 
         /* --- 7. RESPONSIF --- */
         @media (max-width: 768px) {
@@ -116,6 +309,36 @@
             body.mobile-open .toggle-btn { left: calc(90% + 10px); }
             #map { width: 100% !important; margin-left: 0 !important; }
         }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #95a5a6; }
+
+        /* 2. Loading Spinner Overlay (Lebih profesional) */
+        .loading-overlay {
+            display: none; /* Default sembunyi */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 2000;
+            justify-content: center; align-items: center; flex-direction: column;
+            backdrop-filter: blur(2px); /* Efek blur di belakangnya */
+            border-radius: 12px; /* Ikuti border sidebar */
+        }
+        
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .loading-text { font-weight: 600; color: #3498db; letter-spacing: 0.5px; }
+
     </style>
 </head>
 <body>
@@ -146,7 +369,11 @@
         </div>
 
         <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
-        <div id="loading" class="loading">⏳ Sedang menghitung rute...</div>
+        
+        <div id="loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-text">Sedang mencari rute terbaik...</div>
+        </div>
 
         <div id="result-card">
             <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:#333;">Pilihan Rute Terbaik</h3>
@@ -162,8 +389,10 @@
     <script>
         // --- 1. SETUP GLOBAL ---
         var map = L.map('map').setView([-1.2480, 116.8600], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
         }).addTo(map);
 
         var routeLayer = null;
@@ -260,7 +489,7 @@
                 return;
             }
 
-            document.getElementById('loading').style.display = 'block';
+            document.getElementById('loading').style.display = 'flex';
             document.getElementById('result-card').style.display = 'none';
             if(routeLayer) map.removeLayer(routeLayer);
 
@@ -377,24 +606,38 @@
         }
 
         // --- 5. RENDER DETAIL URUTAN ---
+        // Fungsi 5: Render Detail Urutan dengan Tampilan Timeline Keren
         function renderRouteDetails(route) {
-            var listHtml = '<ol class="itinerary-list">';
+            // Header
+            var html = '<div class="timeline-box">';
             
             route.sequence_ids.forEach((id, idx) => {
                 var name = globalPois[String(id)] || "Nama Tidak Ditemukan";
-                var label = (idx === 0) ? "Start" : "Tujuan " + idx;
-                listHtml += `<li><b>${label} :</b> ${name}</li>`;
+                
+                // Tentukan tipe: Start (awal) atau Dest (tujuan)
+                var typeClass = (idx === 0) ? "start" : "dest";
+                var label = (idx === 0) ? "Titik Awal" : "Tujuan ke-" + idx;
+                
+                // Buat HTML item timeline
+                html += `
+                    <div class="timeline-item ${typeClass}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>${label}</h4>
+                            <p>${name}</p>
+                        </div>
+                    </div>
+                `;
             });
-            listHtml += '</ol>';
+            html += '</div>';
 
             var container = document.getElementById('route-details-placeholder');
             if(container) {
+                // Tampilkan dengan wrapper yang rapi
                 container.innerHTML = `
-                    <div class="itinerary-box">
-                        <div style="margin-bottom:10px; font-weight:bold; color:#333; border-bottom:1px solid #eee; padding-bottom:5px;">
-                            Detail Perjalanan:
-                        </div>
-                        ${listHtml}
+                    <div style="margin-top:20px; border-top: 2px dashed #eee; padding-top:20px;">
+                        <h3 style="font-size:1.1rem; margin-bottom:15px; color:#333;">🗺️ Detail Perjalanan</h3>
+                        ${html}
                     </div>
                 `;
             }
