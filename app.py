@@ -25,14 +25,46 @@ def index():
 def api_pois():
     # Kita ambil data dari pois_global yang sudah di-load backend
     data = []
+    # Ambil data global
     valid_pois = pois_global[pois_global['name'].notna()]
     
     for idx, row in valid_pois.iterrows():
+        # --- LOGIKA MENENTUKAN KATEGORI (FIXED) ---
+        kategori = "Lainnya"
+        
+        # Fungsi helper kecil untuk cek data aman
+        def check_col(col_name):
+            val = row.get(col_name)
+            # Cek tidak None dan bukan string 'nan'
+            if val is not None and str(val).lower() != 'nan':
+                return str(val) # Pastikan return string
+            return None
+
+        # Cek prioritas kolom
+        val_tourism = check_col('tourism')
+        val_amenity = check_col('amenity')
+        val_shop = check_col('shop')
+        val_leisure = check_col('leisure')
+
+        if val_tourism:
+            kategori = val_tourism
+        elif val_amenity:
+            kategori = val_amenity
+        elif val_shop:
+            kategori = "Toko/Mart"
+        elif val_leisure:
+            kategori = val_leisure
+            
+        # Bersihkan format teks
+        # Sekarang aman karena kategori pasti string (default "Lainnya" atau hasil konversi)
+        kategori = kategori.replace('_', ' ').title()
+
         data.append({
             "id": int(idx),
             "name": row['name'],
             "lat": row.geometry.y,
-            "lon": row.geometry.x
+            "lon": row.geometry.x,
+            "category": kategori 
         })
     return jsonify(data)
 

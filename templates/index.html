@@ -350,6 +350,13 @@
         <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">Rencanakan perjalanan optimal Anda dengan algoritma cerdas.</p>
 
         <div class="control-group">
+            <label>📂 Filter Kategori</label>
+            <select id="category-filter" class="form-select">
+                <option value="all">Semua Kategori</option>
+                </select>
+        </div>
+
+        <div class="control-group">
             <label>📍 Titik Awal</label>
             <select id="start-select" placeholder="Pilih lokasi awal..."></select>
         </div>
@@ -433,38 +440,89 @@
             .then(data => { initApp(data); })
             .catch(err => console.error("Gagal load POI:", err));
 
+        var allPoisData = []; // Simpan semua data POI disini
+
         function initApp(pois) {
-            var options = [];
-            pois.forEach(p => {
-                options.push({value: p.id, text: p.name});
-                globalPois[String(p.id)] = p.name; 
+            allPoisData = pois; // Simpan ke variabel global
+            
+            // 1. ISI DROPDOWN KATEGORI OTOMATIS
+            var categories = new Set(pois.map(p => p.category));
+            var catSelect = document.getElementById('category-filter');
+            
+            // Urutkan abjad
+            Array.from(categories).sort().forEach(cat => {
+                var opt = document.createElement('option');
+                opt.value = cat;
+                opt.innerHTML = cat;
+                catSelect.appendChild(opt);
             });
 
+            // Event Listener saat Kategori Berubah
+            catSelect.addEventListener('change', function() {
+                filterPoisByCategory(this.value);
+            });
+
+            // 2. INISIALISASI TOMSELECT (KOSONG DULU ATAU ISI SEMUA)
             tsStart = new TomSelect("#start-select", {
-                options: options, maxItems: 1,
+                valueField: 'id', labelField: 'name', searchField: 'name',
+                options: pois, // Default isi semua
+                maxItems: 1,
                 onChange: function() { updateMarkers(); }
             });
 
             tsDest = new TomSelect("#dest-select", {
-                options: options, maxItems: 6, 
+                valueField: 'id', labelField: 'name', searchField: 'name',
+                options: pois, // Default isi semua
+                maxItems: 6, 
                 plugins: ['remove_button'],
                 onChange: function() { updateMarkers(); }
             });
 
-            var markersLayer = L.markerClusterGroup({ disableClusteringAtZoom: 16, spiderfyOnMaxZoom: true });
-            pois.forEach(p => {
+            // ... (Kode Marker Cluster tetap sama) ...
+            renderMarkers(pois); // Panggil fungsi render marker terpisah
+        }
+
+        // FUNGSI BARU: Filter Data
+        function filterPoisByCategory(category) {
+            var filtered = (category === 'all') 
+                ? allPoisData 
+                : allPoisData.filter(p => p.category === category);
+
+            // Update TomSelect
+            tsStart.clearOptions();
+            tsStart.addOptions(filtered);
+            
+            tsDest.clearOptions();
+            tsDest.addOptions(filtered);
+
+            // Update Marker di Peta (Opsional, agar peta tidak penuh)
+            renderMarkers(filtered);
+        }
+
+        // Refactoring: Pisahkan logika render marker agar bisa dipanggil ulang
+        function renderMarkers(poisList) {
+            // Hapus layer lama jika ada (perlu simpan ref ke layer dulu)
+            if (window.markersLayer) map.removeLayer(window.markersLayer);
+            
+            window.markersLayer = L.markerClusterGroup({ disableClusteringAtZoom: 16, spiderfyOnMaxZoom: true });
+            markers = {}; // Reset markers global
+
+            poisList.forEach(p => {
                 var m = L.marker([p.lat, p.lon], {icon: iconGrey}); 
-                m.bindTooltip(p.name, {direction: 'top', offset: [0,-30]});
+                m.bindTooltip(`${p.name}<br><small>${p.category}</small>`, {direction: 'top', offset: [0,-30]}); // Tambah info kategori di tooltip
+                
+                // ... (Event listener click tetap sama) ...
                 m.on('click', function() {
                     var idStr = String(p.id);
                     if (!tsStart.getValue()) tsStart.setValue(idStr);
                     else if (tsDest.getValue().includes(idStr)) tsDest.removeItem(idStr);
                     else if (tsStart.getValue() !== idStr) tsDest.addItem(idStr);
                 });
+
                 markers[p.id] = m;
-                markersLayer.addLayer(m);
+                window.markersLayer.addLayer(m);
             });
-            map.addLayer(markersLayer);
+            map.addLayer(window.markersLayer);
         }
 
         function updateMarkers() {
