@@ -2,224 +2,721 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wisata AI Balikpapan (A*)</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; }
-        #sidebar { width: 350px; background: #f8f9fa; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 1000; display: flex; flex-direction: column; }
-        #map { flex-grow: 1; }
-        h2 { color: #2c3e50; margin-top: 0; }
-        .control-group { margin-bottom: 20px; }
-        label { font-weight: bold; display: block; margin-bottom: 5px; color: #555; }
-        button#btn-cari {
-            background: #3498db; color: white; border: none; padding: 12px; width: 100%;
-            border-radius: 5px; font-size: 16px; cursor: pointer; transition: 0.3s;
+        /* --- 1. LAYOUT UTAMA --- */
+        body { 
+            display: flex; margin: 0; padding: 0; height: 100vh; overflow: hidden; 
+            font-family: 'Poppins', sans-serif; /* Ganti font disini */
+            background-color: #f4f7f6; 
+            color: #333;
         }
-        button#btn-cari:hover { background: #2980b9; }
-        #result-card {
-            margin-top: 20px; padding: 15px; background: white; border-radius: 8px;
-            border-left: 5px solid #2ecc71; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+
+        #sidebar { 
+            width: 400px; /* Sedikit diperlebar agar lega */
+            height: 100%; 
+            background: #ffffff; 
+            z-index: 1000; 
+            padding: 20px; 
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05); 
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
+            position: relative; 
+            overflow-y: auto; 
+            box-sizing: border-box; 
         }
-        .loading { color: #e67e22; font-weight: bold; display: none; margin-top: 10px; }
+        
+        h2 { 
+            margin-top: 0; color: #2c3e50; font-size: 1.5rem; font-weight: 700; 
+            letter-spacing: -0.5px; margin-bottom: 25px; 
+        }
+
+        #map { flex-grow: 1; height: 100%; transition: margin-left 0.3s ease; z-index: 1; }
+
+        /* --- 2. TOMBOL TOGGLE SIDEBAR --- */
+        .toggle-btn { 
+            position: absolute; top: 15px; left: 395px; z-index: 1001; 
+            background: white; border: 1px solid #ddd; border-radius: 50%; 
+            width: 40px; height: 40px; cursor: pointer; 
+            font-size: 1.2rem; color: #555; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            transition: left 0.3s ease; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .toggle-btn:hover { background: #f0f0f0; }
+
+        /* --- 3. STATE SIDEBAR --- */
+        body.sidebar-closed #sidebar { transform: translateX(-380px); position: absolute; }
+        body.sidebar-closed #map { width: 100%; margin-left: 0; }
+        body.sidebar-closed .toggle-btn { left: 15px; }
+
+        /* --- 4. STYLE FORM --- */
+        h2 { margin-top: 0; color: #2c3e50; font-size: 1.4rem; font-weight: 700; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; }
+        .control-group { margin-bottom: 15px; }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+        }
+        
+        /* --- HARMONISASI DROPDOWN (ALGORITMA vs TOMSELECT) --- */
+
+        /* 1. Reset Dasar untuk Semua Input Dropdown */
+        .form-select, .ts-control {
+            width: 100%;
+            min-height: 48px; /* Pastikan tingginya sama persis */
+            padding: 10px 15px; /* Padding identik */
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px; /* Sudut membulat sama */
+            box-sizing: border-box; /* Agar padding tidak menambah lebar */
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* 2. Styling Khusus Dropdown Algoritma (Select Standar) */
+        .form-select { 
+            appearance: none; /* Hilangkan style bawaan browser */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            outline: none;
+            cursor: pointer;
+            
+            /* Ikon Panah Kustom (Mirip TomSelect) */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233498db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px; /* Beri ruang untuk ikon panah */
+        }
+
+        /* Efek Focus (Glow Biru) - Disamakan */
+        .form-select:focus, .ts-control.focus {
+            border-color: #3498db !important;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15) !important;
+        }
+
+        /* 3. Penyesuaian Paksa untuk TomSelect agar menuruti CSS di atas */
+        .ts-control {
+            display: flex !important;
+            align-items: center !important;
+            box-shadow: none !important;
+            padding-right: 35px !important; /* Ruang untuk panah bawaan TomSelect */
+        }
+        
+        /* Input teks di dalam TomSelect */
+        .ts-control > input {
+            font-family: 'Poppins', sans-serif !important;
+            font-size: 14px !important;
+            color: #333 !important;
+        }
+
+        /* Item yang dipilih (Chip Biru) */
+        .ts-wrapper.multi .ts-control > div {
+            background: #f0f9ff !important;
+            color: #2980b9 !important;
+            border: 1px solid #bde0fe !important;
+            border-radius: 6px !important;
+            padding: 3px 10px !important;
+            margin-right: 5px !important;
+        }
+
+        /* Dropdown Menu yang muncul saat diklik */
+        .ts-dropdown {
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
+            border: 1px solid #f0f0f0 !important;
+            margin-top: 8px !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            z-index: 2000 !important;
+        }
+        
+        .ts-dropdown .option {
+            padding: 12px 15px !important;
+            font-size: 14px !important;
+            cursor: pointer !important;
+        }
+        
+        .ts-dropdown .active {
+            background-color: #f8f9fa !important;
+            color: #3498db !important;
+            font-weight: 600 !important;
+        }
+
+        #btn-cari { 
+            width: 100%; padding: 14px; 
+            background: linear-gradient(135deg, #3498db, #2980b9); /* Gradasi warna */
+            color: white; border: none; border-radius: 12px; 
+            font-size: 16px; font-weight: 600; cursor: pointer; 
+            transition: all 0.3s ease; margin-top: 15px; 
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
+        }
+        #btn-cari:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(52, 152, 219, 0.3); }
+        #btn-cari:active { transform: scale(0.98); }
+
+        .loading { display: none; text-align: center; margin: 15px 0; color: #7f8c8d; font-style: italic; font-size: 0.9rem; }
+
+        /* --- 5. STYLE TOMBOL RUTE (CARD STYLE) --- */
+        #result-card { display: none; margin-top: 25px; border-top: 2px solid #f0f0f0; padding-top: 15px; }
+        
+        .route-card {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; border: 1px solid #f0f0f0; border-radius: 12px;
+            padding: 15px 20px; margin-bottom: 12px; cursor: pointer;
+            transition: all 0.2s ease; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); /* Shadow tipis */
+        }
+        
+        .compare-table { 
+            width: 100%; 
+            border-collapse: separate; /* Penting agar border-radius bekerja */
+            border-spacing: 0; 
+            margin-top: 15px; 
+            font-size: 0.95rem; 
+            background: white;
+            border-radius: 12px; /* Sudut membulat konsisten */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Shadow lembut */
+            overflow: hidden; /* Agar anak elemen tidak menembus sudut bulat */
+            border: 1px solid #f0f0f0;
+        }
+
+        /* Header Tabel */
+        .compare-table th { 
+            background: #f8f9fa; /* Warna abu muda modern */
+            padding: 15px; 
+            text-align: center; 
+            color: #2c3e50;
+            font-weight: 600;
+            border-bottom: 2px solid #eaeaea;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        /* Sel Data */
+        .compare-table td { 
+            padding: 15px; 
+            text-align: center; 
+            border-bottom: 1px solid #f0f0f0;
+            color: #555;
+        }
+
+        /* Baris terakhir tidak perlu garis bawah */
+        .compare-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Efek Hover pada Baris */
+        .compare-table tbody tr:hover {
+            background-color: #fcfcfc;
+        }
+
+        /* --- HIGHLIGHT PEMENANG (WINNER) --- */
+        .winner { 
+            background-color: #e6fffa !important; /* Hijau mint lembut */
+            color: #00b894; /* Teks hijau modern */
+            font-weight: 700; 
+            position: relative;
+        }
+        
+        /* Menambah ikon piala kecil secara otomatis */
+        .winner::before {
+            content: "✨";
+            margin-right: 5px;
+            font-size: 1.1em;
+        }
+
+        .route-card:hover { 
+            border-color: #3498db; transform: translateY(-3px); 
+            box-shadow: 0 8px 15px rgba(0,0,0,0.05); 
+        }
+        .route-card.active {
+            background-color: #f0f9ff; 
+            border: 1px solid #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .route-info h4 { margin: 0; font-size: 1rem; color: #2c3e50; }
+        .route-info p { margin: 3px 0 0 0; font-size: 0.85rem; color: #7f8c8d; }
+        .route-meta { text-align: right; }
+        .route-dist { font-size: 1.2rem; font-weight: 700; color: #27ae60; }
+        .route-time { font-size: 0.85rem; color: #e67e22; font-weight: 600; }
+
+        .timeline-box { margin-top: 25px; padding-left: 10px; }
+    
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            padding-bottom: 25px;
+            border-left: 2px solid #e0e0e0; /* Garis vertikal */
+        }
+        .timeline-item:last-child { border-left: none; padding-bottom: 0; }
+        
+        .timeline-marker {
+            position: absolute; left: -9px; top: 0;
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #fff; border: 3px solid #bdc3c7;
+            box-shadow: 0 0 0 2px white;
+        }
+        
+        /* Warna marker berbeda untuk Start (Merah) & Tujuan (Biru) */
+        .timeline-item.start .timeline-marker { border-color: #e74c3c; background: #e74c3c; }
+        .timeline-item.dest .timeline-marker { border-color: #3498db; background: #3498db; }
+        
+        .timeline-content h4 { margin: 0 0 4px 0; font-size: 0.9rem; color: #7f8c8d; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .timeline-content p { margin: 0; font-size: 1rem; font-weight: 600; color: #2c3e50; }
+
+        /* Style List Urutan */
+        .itinerary-box { background: #fafafa; border-radius: 8px; padding: 15px; margin-top: 15px; border: 1px solid #eee; }
+        .itinerary-list { margin: 0; padding-left: 20px; font-size: 0.9rem; color: #555; }
+        .itinerary-list li { margin-bottom: 8px; line-height: 1.4; }
+        .itinerary-list li b { color: #333; }
+
+        /* --- 6. LEAFLET CONTROL FIX --- */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+            font-family: 'Poppins', sans-serif !important;
+        }
+        .leaflet-popup-content {
+            margin: 15px !important;
+            font-size: 13px !important;
+            color: #2c3e50;
+        }
+        .leaflet-popup-tip {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+        }
+
+        /* --- 7. RESPONSIF --- */
+        @media (max-width: 768px) {
+            #sidebar { position: absolute; width: 90%; max-width: 320px; height: 100%; left: 0; top: 0; transform: translateX(-100%); }
+            .toggle-btn { left: 15px; top: 15px; }
+            body.mobile-open #sidebar { transform: translateX(0) !important; box-shadow: 5px 0 20px rgba(0,0,0,0.2); }
+            body.mobile-open .toggle-btn { left: calc(90% + 10px); }
+            #map { width: 100% !important; margin-left: 0 !important; }
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #95a5a6; }
+
+        /* 2. Loading Spinner Overlay (Lebih profesional) */
+        .loading-overlay {
+            display: none; /* Default sembunyi */
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 2000;
+            justify-content: center; align-items: center; flex-direction: column;
+            backdrop-filter: blur(2px); /* Efek blur di belakangnya */
+            border-radius: 12px; /* Ikuti border sidebar */
+        }
+        
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .loading-text { font-weight: 600; color: #3498db; letter-spacing: 0.5px; }
+
     </style>
 </head>
 <body>
 
-<div id="sidebar">
-    <h2>🗺️ Pencari Rute Wisata</h2>
-    <p style="font-size: 0.9em; color: #666;">Pilih titik lewat peta atau pencarian.</p>
+    <button id="sidebarToggle" class="toggle-btn">☰</button>
 
-    <div class="control-group">
-        <label>📍 Titik Awal</label>
-        <select id="start-select" placeholder="Pilih lokasi awal..."></select>
-    </div>
+    <div id="sidebar">
+        <h2>🗺️ Rute Wisata Balikpapan</h2>
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">Rencanakan perjalanan optimal Anda dengan algoritma cerdas.</p>
 
-    <div class="control-group">
-        <label>🏖️ Destinasi</label>
-        <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
-    </div>
+        <div class="control-group">
+            <label>📂 Filter Kategori</label>
+            <select id="category-filter" class="form-select">
+                <option value="all">Semua Kategori</option>
+                </select>
+        </div>
 
-    <button id="btn-cari" onclick="hitungRute()">Temukan Rute Perjalanan</button>
-    <div id="loading" class="loading">Menghitung rute...</div>
+        <div class="control-group">
+            <label>📍 Titik Awal</label>
+            <select id="start-select" placeholder="Pilih lokasi awal..."></select>
+        </div>
 
-    <div id="result-card">
-        <h3 style="margin:0 0 10px 0;">Hasil Perhitungan</h3>
-        <div id="result-content"></div>
-    </div>
-</div>
+        <div class="control-group">
+            <label>🏖️ Destinasi (Maks. 6)</label>
+            <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
+        </div>
 
-<div id="map"></div>
+        <div class="control-group">
+            <label>⚙️ Algoritma Pencarian</label>
+            <select id="algo-select" class="form-select">
+                <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
+                <option value="astar">Hanya A* (A-Star)</option>
+                <option value="dijkstra">Hanya Dijkstra</option>
+            </select>
+        </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-
-<script>
-    // --- 1. SETUP PETA ---
-    var map = L.map('map').setView([-1.2480, 116.8600], 13); // Fokus Balikpapan
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    var routeLayer = null;
-    var markers = {}; // Simpan referensi marker {id: markerObj}
-
-    // Icons
-    var iconGrey = L.icon({iconUrl: '/static/assets/marker-icon-grey.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
-    var iconGreen = L.icon({iconUrl: '/static/assets/marker-icon-green.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
-    var iconRed = L.icon({iconUrl: '/static/assets/marker-icon-red.png', shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
-
-    // Global TomSelect Instances
-    var tsStart, tsDest;
-
-    // --- 2. LOAD DATA ---
-    fetch('/api/pois')
-        .then(res => res.json())
-        .then(data => {
-            initApp(data);
-        });
-
-    function initApp(pois) {
-        // Format data untuk TomSelect
-        var options = pois.map(p => ({value: p.id, text: p.name}));
-
-        // Init TomSelect (Biarkan kode ini seperti sebelumnya...)
-        tsStart = new TomSelect("#start-select", {
-            options: options, maxItems: 1,
-            onChange: function(val) { updateMarkers(); }
-        });
-
-        tsDest = new TomSelect("#dest-select", {
-            options: options, maxItems: 10, plugins: ['remove_button'],
-            onChange: function(val) { updateMarkers(); }
-        });
-
-        // === PERBAIKAN UTAMA DI SINI ===
+        <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
         
-        // 1. Inisialisasi Marker Cluster Group
-        // Ini akan otomatis mengelompokkan marker yang berdekatan
-        var markersLayer = L.markerClusterGroup({
-            disableClusteringAtZoom: 16, // Di zoom level 16, semua titik akan pecah (terlihat)
-            spiderfyOnMaxZoom: true
+        <div id="loading" class="loading-overlay">
+            <div class="spinner"></div>
+            <div class="loading-text">Sedang mencari rute terbaik...</div>
+        </div>
+
+        <div id="result-card">
+            <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:#333;">Pilihan Rute Terbaik</h3>
+            <div id="route-options-list"></div> <div id="route-details-placeholder"></div> </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // --- 1. SETUP GLOBAL ---
+        var map = L.map('map').setView([-1.2480, 116.8600], 13);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        var routeLayer = null;
+        var markers = {};
+        var globalPois = {}; 
+        var currentRouteData = null;
+        var currentRoutesList = []; 
+        const segmentColors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22'];
+        
+        var iconGrey = L.icon({iconUrl: '/static/assets/marker-icon-grey.png', shadowUrl: '/static/assets/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
+        var iconGreen = L.icon({iconUrl: '/static/assets/marker-icon-green.png', shadowUrl: '/static/assets/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
+        var iconRed = L.icon({iconUrl: '/static/assets/marker-icon-red.png', shadowUrl: '/static/assets/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
+
+        var tsStart, tsDest;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.getElementById('sidebarToggle');
+            const body = document.body;
+            
+            function checkMobile() {
+                if (window.innerWidth <= 768) body.classList.remove('sidebar-closed'); 
+                else body.classList.remove('mobile-open');
+            }
+            checkMobile();
+            window.addEventListener('resize', checkMobile);
+            toggleBtn.addEventListener('click', function() {
+                if (window.innerWidth <= 768) body.classList.toggle('mobile-open'); 
+                else body.classList.toggle('sidebar-closed');
+                setTimeout(() => map.invalidateSize(), 300);
+            });
+            
+            // HAPUS event listener 'mode-select' karena elemennya sudah tidak ada
         });
 
-        // 2. Loop POI
-        pois.forEach(p => {
-            // Kita pakai Icon default dulu jika custom icon bermasalah, 
-            // atau pastikan internet lancar untuk load icon custom.
-            // Jika ingin tetap pakai icon custom, pastikan URL-nya benar.
-            
-            var m = L.marker([p.lat, p.lon], {icon: iconGrey}); 
-            
-            // Bind Tooltip (Nama muncul saat hover)
-            m.bindTooltip(p.name, {direction: 'top', offset: [0,-30]});
+        // --- 2. LOAD DATA ---
+        fetch('/api/pois')
+            .then(res => res.json())
+            .then(data => { initApp(data); })
+            .catch(err => console.error("Gagal load POI:", err));
 
-            // Interaksi Klik
-            m.on('click', function() {
-                var idStr = String(p.id);
-                if (!tsStart.getValue()) {
-                    tsStart.setValue(idStr);
-                } else if (tsDest.getValue().includes(idStr)) {
-                    tsDest.removeItem(idStr);
-                } else if (tsStart.getValue() !== idStr) {
-                    tsDest.addItem(idStr);
-                }
+        var allPoisData = []; // Simpan semua data POI disini
+
+        function initApp(pois) {
+            allPoisData = pois; // Simpan ke variabel global
+            
+            // 1. ISI DROPDOWN KATEGORI OTOMATIS
+            var categories = new Set(pois.map(p => p.category));
+            var catSelect = document.getElementById('category-filter');
+            
+            // Urutkan abjad
+            Array.from(categories).sort().forEach(cat => {
+                var opt = document.createElement('option');
+                opt.value = cat;
+                opt.innerHTML = cat;
+                catSelect.appendChild(opt);
             });
 
-            // Simpan referensi marker di object markers
-            markers[p.id] = m;
+            // Event Listener saat Kategori Berubah
+            catSelect.addEventListener('change', function() {
+                filterPoisByCategory(this.value);
+            });
 
-            // Masukkan marker ke Cluster Group, BUKAN langsung ke map
-            markersLayer.addLayer(m);
-        });
+            // 2. INISIALISASI TOMSELECT (KOSONG DULU ATAU ISI SEMUA)
+            tsStart = new TomSelect("#start-select", {
+                valueField: 'id', labelField: 'name', searchField: 'name',
+                options: pois, // Default isi semua
+                maxItems: 1,
+                onChange: function() { updateMarkers(); }
+            });
 
-        // 3. Tambahkan Layer Cluster ke Peta
-        map.addLayer(markersLayer);
-        
-        // Simpan referensi cluster layer agar bisa dihapus/refresh jika perlu
-        // window.markersLayer = markersLayer; 
-    }
+            tsDest = new TomSelect("#dest-select", {
+                valueField: 'id', labelField: 'name', searchField: 'name',
+                options: pois, // Default isi semua
+                maxItems: 6, 
+                plugins: ['remove_button'],
+                onChange: function() { updateMarkers(); }
+            });
 
-    // --- 3. UPDATE WARNA MARKER ---
-    function updateMarkers() {
-        var startId = tsStart.getValue();
-        var destIds = tsDest.getValue(); // Array of strings
+            // ... (Kode Marker Cluster tetap sama) ...
+            renderMarkers(pois); // Panggil fungsi render marker terpisah
+        }
 
-        for (var id in markers) {
-            var m = markers[id];
+        // FUNGSI BARU: Filter Data
+        function filterPoisByCategory(category) {
+            var filtered = (category === 'all') 
+                ? allPoisData 
+                : allPoisData.filter(p => p.category === category);
+
+            // Update TomSelect
+            tsStart.clearOptions();
+            tsStart.addOptions(filtered);
             
-            if (id === startId) {
-                m.setIcon(iconRed); // Titik Awal = Merah
-                m.setZIndexOffset(1000);
-            } else if (destIds.includes(id)) {
-                m.setIcon(iconGreen); // Destinasi = Hijau
-                m.setZIndexOffset(900);
-            } else {
-                m.setIcon(iconGrey); // Netral = Abu
-                m.setZIndexOffset(0);
+            tsDest.clearOptions();
+            tsDest.addOptions(filtered);
+
+            // Update Marker di Peta (Opsional, agar peta tidak penuh)
+            renderMarkers(filtered);
+        }
+
+        // Refactoring: Pisahkan logika render marker agar bisa dipanggil ulang
+        function renderMarkers(poisList) {
+            // Hapus layer lama jika ada (perlu simpan ref ke layer dulu)
+            if (window.markersLayer) map.removeLayer(window.markersLayer);
+            
+            window.markersLayer = L.markerClusterGroup({ disableClusteringAtZoom: 16, spiderfyOnMaxZoom: true });
+            markers = {}; // Reset markers global
+
+            poisList.forEach(p => {
+                var m = L.marker([p.lat, p.lon], {icon: iconGrey}); 
+                m.bindTooltip(`${p.name}<br><small>${p.category}</small>`, {direction: 'top', offset: [0,-30]}); // Tambah info kategori di tooltip
+                
+                // ... (Event listener click tetap sama) ...
+                m.on('click', function() {
+                    var idStr = String(p.id);
+                    if (!tsStart.getValue()) tsStart.setValue(idStr);
+                    else if (tsDest.getValue().includes(idStr)) tsDest.removeItem(idStr);
+                    else if (tsStart.getValue() !== idStr) tsDest.addItem(idStr);
+                });
+
+                markers[p.id] = m;
+                window.markersLayer.addLayer(m);
+            });
+            map.addLayer(window.markersLayer);
+        }
+
+        function updateMarkers() {
+            var startId = tsStart.getValue();
+            var destIds = tsDest.getValue();
+            for (var id in markers) {
+                var m = markers[id];
+                if (id === startId) { m.setIcon(iconRed); m.setZIndexOffset(1000); } 
+                else if (destIds.includes(id)) { m.setIcon(iconGreen); m.setZIndexOffset(900); } 
+                else { m.setIcon(iconGrey); m.setZIndexOffset(0); }
             }
         }
-    }
 
-    // --- 4. HITUNG RUTE (Panggil Flask A*) ---
-    function hitungRute() {
-        var startId = tsStart.getValue();
-        var destIds = tsDest.getValue();
+        // --- 3. LOGIKA RUTE ---
+        function hitungRute() {
+            var startId = tsStart.getValue();
+            var destIds = tsDest.getValue();
+            var mode = document.getElementById('algo-select').value;
 
-        if (!startId || destIds.length === 0) {
-            alert("Pilih minimal 1 titik awal dan 1 destinasi!");
-            return;
-        }
-
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('result-card').style.display = 'none';
-        if(routeLayer) map.removeLayer(routeLayer);
-
-        fetch('/api/route', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                start_id: parseInt(startId),
-                dest_ids: destIds.map(id => parseInt(id))
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById('loading').style.display = 'none';
-            
-            if (data.error) {
-                alert("Error: " + data.error);
+            if (!startId || destIds.length === 0) {
+                alert("Pilih minimal 1 titik awal dan 1 destinasi!");
                 return;
             }
 
-            // Gambar Garis Rute
-            routeLayer = L.geoJSON(data.geojson, {
-                style: {color: '#3498db', weight: 6, opacity: 0.8}
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('result-card').style.display = 'none';
+            if(routeLayer) map.removeLayer(routeLayer);
+
+            fetch('/api/route', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    start_id: parseInt(startId),
+                    dest_ids: destIds.map(id => parseInt(id)),
+                    mode: mode 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                
+                if (data.error) { alert("Error: " + data.error); return; }
+
+                document.getElementById('result-card').style.display = 'block';
+                var container = document.getElementById('route-options-list');
+                var details = document.getElementById('route-details-placeholder');
+
+                if (data.mode === 'compare') {
+                    // MODE BANDINGKAN
+                    var astar = data.astar;
+                    var dijkstra = data.dijkstra;
+                    
+                    tampilkanPeta(astar);
+
+                    var aTime = astar.stats.time_ms;
+                    var dTime = dijkstra.stats.time_ms;
+                    var aNodes = astar.stats.nodes_visited;
+                    var dNodes = dijkstra.stats.nodes_visited;
+
+                    container.innerHTML = `
+                        <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">🆚 Hasil Benchmark:</div>
+                        <table class="compare-table">
+                            <thead>
+                                <tr>
+                                    <th>Metrik</th>
+                                    <th>A* (Smart)</th>
+                                    <th>Dijkstra (Blind)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Total Jarak</td>
+                                    <td>${astar.total_km} km</td>
+                                    <td>${dijkstra.total_km} km</td>
+                                </tr>
+                                <tr>
+                                    <td>Waktu (Server)</td>
+                                    <td class="${aTime <= dTime ? 'winner' : ''}">${aTime} ms</td>
+                                    <td class="${dTime < aTime ? 'winner' : ''}">${dTime} ms</td>
+                                </tr>
+                                <tr>
+                                    <td>Efisiensi<br><small>(Nodes Dicek)</small></td>
+                                    <td class="${aNodes <= dNodes ? 'winner' : ''}">${aNodes}</td>
+                                    <td class="${dNodes < aNodes ? 'winner' : ''}">${dNodes}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top:15px; font-size:0.85em; color:#555; background:#e8f4f8; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
+                            💡 <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
+                        </div>
+                    `;
+                    details.innerHTML = ''; 
+
+                } else {
+                    // MODE BIASA (Single Route / Alternatif)
+                    currentRoutesList = data.routes;
+                    pilihRuteOtomatis(data.routes[0]);
+                }
+                
+                if(window.innerWidth <= 768) document.body.classList.remove('mobile-open');
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('loading').style.display = 'none';
+                alert("Gagal menghubungi server.");
+            });
+        }
+
+        function pilihRuteOtomatis(route) {
+            currentRouteData = route; 
+            renderRouteButtons(currentRoutesList, route.rank); 
+            renderRouteDetails(route); 
+            tampilkanPeta(route); 
+        }
+
+        // --- 4. RENDER TOMBOL (TANPA WAKTU) ---
+        function renderRouteButtons(allRoutes, activeRank) {
+            var container = document.getElementById('route-options-list');
+            if(!container) return; 
+
+            var html = '';
+
+            allRoutes.forEach(route => {
+                // TIDAK ADA PERHITUNGAN WAKTU LAGI DISINI
+                var isActive = (route.rank === activeRank) ? 'active' : '';
+                
+                html += `
+                <div class="route-card ${isActive}" onclick='pilihRuteOtomatis(${JSON.stringify(route)})'>
+                    <div class="route-info">
+                        <h4>Rute ${route.rank}</h4>
+                        <p>${route.sequence_ids.length - 1} Destinasi</p>
+                    </div>
+                    <div class="route-meta">
+                        <span class="route-dist">${route.total_km} km</span>
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- 5. RENDER DETAIL URUTAN ---
+        // Fungsi 5: Render Detail Urutan dengan Tampilan Timeline Keren
+        function renderRouteDetails(route) {
+            // Header
+            var html = '<div class="timeline-box">';
+            
+            route.sequence_ids.forEach((id, idx) => {
+                var name = globalPois[String(id)] || "Nama Tidak Ditemukan";
+                
+                // Tentukan tipe: Start (awal) atau Dest (tujuan)
+                var typeClass = (idx === 0) ? "start" : "dest";
+                var label = (idx === 0) ? "Titik Awal" : "Tujuan ke-" + idx;
+                
+                // Buat HTML item timeline
+                html += `
+                    <div class="timeline-item ${typeClass}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            <h4>${label}</h4>
+                            <p>${name}</p>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            var container = document.getElementById('route-details-placeholder');
+            if(container) {
+                // Tampilkan dengan wrapper yang rapi
+                container.innerHTML = `
+                    <div style="margin-top:20px; border-top: 2px dashed #eee; padding-top:20px;">
+                        <h3 style="font-size:1.1rem; margin-bottom:15px; color:#333;">🗺️ Detail Perjalanan</h3>
+                        ${html}
+                    </div>
+                `;
+            }
+        }
+
+        function tampilkanPeta(routeData) {
+            if(routeLayer) map.removeLayer(routeLayer);
+
+            routeLayer = L.geoJSON(routeData.geojson, {
+                style: function(feature) {
+                    var idx = feature.properties.segment_index;
+                    var color = segmentColors[idx % segmentColors.length];
+                    return { color: color, weight: 6, opacity: 0.9, lineCap: 'round' };
+                },
+                onEachFeature: function(feature, layer) {
+                    layer.bindPopup(`Segmen Jalan ke-${feature.properties.segment_index + 1}`);
+                }
             }).addTo(map);
 
             map.fitBounds(routeLayer.getBounds(), {padding: [50,50]});
-
-            // Tampilkan Info
-            document.getElementById('result-card').style.display = 'block';
-            document.getElementById('result-content').innerHTML = `
-                <div><b>Total Jarak:</b> ${data.total_km} KM</div>
-                <div style="font-size:0.9em; margin-top:5px; color:#666;">Rute mencakup ${destIds.length} tempat wisata.</div>
-            `;
-        })
-        .catch(err => {
-            console.error(err);
-            document.getElementById('loading').style.display = 'none';
-            alert("Gagal menghubungi server.");
-        });
-    }
-</script>
-
+        }
+    </script>
 </body>
 </html>

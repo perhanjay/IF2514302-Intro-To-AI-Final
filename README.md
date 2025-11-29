@@ -19,3 +19,7 @@ main
 - Data: Used for geographic data processing inside the algorithm
 - data_web: Used for geographic data processing used by leaflet.js
 - out: folder outputting the final route
+
+database histroy pake sql guys.
+tambahin tiga rute alternatif. 
+okesip.
