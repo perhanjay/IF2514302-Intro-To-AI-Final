@@ -195,19 +195,18 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         distances = {}
         nodes_to_calc = [start_node] + dest_nodes
         
-        # 2. Hitung Matriks Jarak (Panggil my_astar)
+        # 2. Hitung Matriks Jarak
         for u in nodes_to_calc:
             distances[u] = {}
             for v in nodes_to_calc:
                 if u == v:
                     distances[u][v] = 0; continue
                 
-                # Terima 3 return value
                 length, path, visited = my_astar(G, u, v, heuristic_func)
                 distances[u][v] = length if path else float('inf')
                 total_nodes_visited += visited
 
-        # 3. TSP Permutasi (Manual)
+        # 3. TSP Permutasi
         all_candidates = []
         for p in permutations(dest_ids):
             current_dist = 0
@@ -227,10 +226,12 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         all_candidates.sort(key=lambda x: x['total_dist'])
         best_route = all_candidates[0]
         
-        # 4. Rekonstruksi GeoJSON
+        # 4. Rekonstruksi GeoJSON & Full Node Path
         features = []
         path_seq = [start_id] + list(best_route['order'])
         full_poi_path = [start_id] + list(best_route['order'])
+        
+        full_node_path = [] # <--- TAMBAHAN PENTING 1
         
         for i in range(len(full_poi_path) - 1):
             u_node = poi_to_node[full_poi_path[i]]
@@ -238,6 +239,7 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
             _, seg_path, _ = my_astar(G, u_node, v_node, heuristic_func)
             
             if seg_path:
+                full_node_path.extend(seg_path) # <--- TAMBAHAN PENTING 2
                 coords = [[G.nodes[n]['x'], G.nodes[n]['y']] for n in seg_path]
                 features.append({
                     "type": "Feature",
@@ -251,15 +253,15 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
             "total_km": round(best_route['total_dist'] / 1000, 2),
             "sequence_ids": path_seq,
             "geojson": {"type": "FeatureCollection", "features": features},
-            "stats": {"time_ms": round(execution_time, 2), "nodes_visited": total_nodes_visited}
+            "stats": {"time_ms": round(execution_time, 2), "nodes_visited": total_nodes_visited},
+            "full_nodes": full_node_path # <--- TAMBAHAN PENTING 3 (Agar bisa diakses fungsi alternatif)
         }
 
-    # --- LOGIKA UTAMA: Cek Mode ---
+    # --- LOGIKA UTAMA ---
     try:
         if algo_mode == 'compare':
-            print("Running A*...")
+            # Mode Compare tetap sama
             res_astar = run_tsp(heuristic_dist)
-            print("Running Dijkstra...")
             res_dijkstra = run_tsp(heuristic_zero)
             
             if not res_astar or not res_dijkstra:
@@ -271,20 +273,58 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
                 "dijkstra": res_dijkstra
             }
         else:
-            # Mode Single (A* atau Dijkstra saja)
+            # Mode Single sekarang hanya mengembalikan dict biasa
+            # Nanti fungsi wrapper yang akan mengurus list-nya
             func = heuristic_zero if algo_mode == 'dijkstra' else heuristic_dist
             result = run_tsp(func)
             
             if not result: return {"error": "Gagal menemukan rute."}
-            
-            # Tambahkan format agar kompatibel dengan UI Single
-            result['rank'] = 1
-            return {"mode": "single", "routes": [result]}
+            return result
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
+
+def get_alternative_routes(G, pois, start_id, dest_ids, mode='astar', k=3):
+    """
+    Mencari 3 rute alternatif dengan memberi penalti pada jalan yang sudah dilewati.
+    """
+    results = []
+    G_temp = G.copy() # Copy agar graph asli tidak rusak
+    penalty_factor = 2.0 # Bobot hukuman (semakin besar, semakin 'menghindar')
+
+    print(f"🔄 [Backend] Mencari {k} alternatif rute...")
+
+    for i in range(k):
+        # Panggil solve_tour
+        res = solve_tour(G_temp, pois, start_id, dest_ids, mode)
+        
+        # Cek validitas hasil
+        if not res or "error" in res:
+            break
+            
+        # Tambahkan ranking untuk UI
+        res['rank'] = i + 1
+        results.append(res)
+        
+        # LOGIKA PENALTI: Hanya jalan jika kita butuh rute berikutnya (i < k-1)
+        # Dan pastikan 'full_nodes' ada di hasil (dari update solve_tour tadi)
+        if i < k - 1 and 'full_nodes' in res:
+            path_nodes = res['full_nodes']
+            # Loop setiap pasang node dalam rute
+            for j in range(len(path_nodes) - 1):
+                u, v = path_nodes[j], path_nodes[j+1]
+                
+                # Jika edge ada di graph temp, kalikan bobotnya
+                if G_temp.has_edge(u, v):
+                    # NetworkX MultiGraph menyimpan edge dalam dict key (biasanya 0)
+                    for key in G_temp[u][v]:
+                        current_len = G_temp[u][v][key].get('length', 0)
+                        G_temp[u][v][key]['length'] = current_len * penalty_factor
+                        
+    return results
+
 # ==========================================
 # 3. MAIN (UNTUK TESTING MANUAL)
 # ==========================================
