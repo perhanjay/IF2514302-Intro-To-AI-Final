@@ -137,15 +137,6 @@
         </div>
 
         <div class="control-group">
-            <label>🚗 Mode Transportasi</label>
-            <select id="mode-select" class="form-select">
-                <option value="40">Mobil (40 km/jam)</option>
-                <option value="30" selected>Motor (30 km/jam)</option>
-                <option value="4">Jalan Kaki (4 km/jam)</option>
-            </select>
-        </div>
-
-        <div class="control-group">
             <label>⚙️ Algoritma Pencarian</label>
             <select id="algo-select" class="form-select">
                 <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
@@ -179,7 +170,7 @@
         var markers = {};
         var globalPois = {}; 
         var currentRouteData = null;
-        var currentRoutesList = []; // Simpan semua rute hasil pencarian
+        var currentRoutesList = []; 
         const segmentColors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#e67e22'];
         
         var iconGrey = L.icon({iconUrl: '/static/assets/marker-icon-grey.png', shadowUrl: '/static/assets/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]});
@@ -203,15 +194,8 @@
                 else body.classList.toggle('sidebar-closed');
                 setTimeout(() => map.invalidateSize(), 300);
             });
-
-            // Update waktu otomatis saat ganti mode transportasi
-            document.getElementById('mode-select').addEventListener('change', function() {
-                if (currentRouteData) {
-                    renderRouteDetails(currentRouteData); // Render ulang detail waktu
-                    // Render ulang list tombol juga agar waktu di tombol berubah
-                    renderRouteButtons(currentRoutesList, currentRouteData.rank);
-                }
-            });
+            
+            // HAPUS event listener 'mode-select' karena elemennya sudah tidak ada
         });
 
         // --- 2. LOAD DATA ---
@@ -224,7 +208,6 @@
             var options = [];
             pois.forEach(p => {
                 options.push({value: p.id, text: p.name});
-                // PERBAIKAN: Paksa ID jadi String agar kunci database konsisten
                 globalPois[String(p.id)] = p.name; 
             });
 
@@ -270,7 +253,7 @@
         function hitungRute() {
             var startId = tsStart.getValue();
             var destIds = tsDest.getValue();
-            var mode = document.getElementById('algo-select').value; // Ambil mode algoritma
+            var mode = document.getElementById('algo-select').value;
 
             if (!startId || destIds.length === 0) {
                 alert("Pilih minimal 1 titik awal dan 1 destinasi!");
@@ -287,7 +270,7 @@
                 body: JSON.stringify({
                     start_id: parseInt(startId),
                     dest_ids: destIds.map(id => parseInt(id)),
-                    mode: mode // Kirim mode ke server
+                    mode: mode 
                 })
             })
             .then(res => res.json())
@@ -300,16 +283,13 @@
                 var container = document.getElementById('route-options-list');
                 var details = document.getElementById('route-details-placeholder');
 
-                // --- LOGIKA UTAMA: BANDINGKAN vs SINGLE ---
                 if (data.mode === 'compare') {
-                    // 1. MODE BANDINGKAN
+                    // MODE BANDINGKAN
                     var astar = data.astar;
                     var dijkstra = data.dijkstra;
                     
-                    // Tampilkan Peta dari A* (biasanya jalurnya sama/mirip)
                     tampilkanPeta(astar);
 
-                    // Buat Tabel Perbandingan
                     var aTime = astar.stats.time_ms;
                     var dTime = dijkstra.stats.time_ms;
                     var aNodes = astar.stats.nodes_visited;
@@ -347,12 +327,11 @@
                             💡 <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
                         </div>
                     `;
-                    details.innerHTML = ''; // Kosongkan detail urutan (fokus ke tabel)
+                    details.innerHTML = ''; 
 
                 } else {
-                    // 2. MODE BIASA (Single Route)
+                    // MODE BIASA (Single Route / Alternatif)
                     currentRoutesList = data.routes;
-                    // Tampilkan tombol opsi rute seperti biasa
                     pilihRuteOtomatis(data.routes[0]);
                 }
                 
@@ -364,29 +343,25 @@
                 alert("Gagal menghubungi server.");
             });
         }
-        // Fungsi Wrapper untuk memanggil logika render
+
         function pilihRuteOtomatis(route) {
-            currentRouteData = route; // Simpan state rute yang aktif
-            renderRouteButtons(currentRoutesList, route.rank); // Update tampilan tombol (mana yang aktif)
-            renderRouteDetails(route); // Update teks detail urutan
-            tampilkanPeta(route); // Gambar garis di peta
+            currentRouteData = route; 
+            renderRouteButtons(currentRoutesList, route.rank); 
+            renderRouteDetails(route); 
+            tampilkanPeta(route); 
         }
 
-        // Fungsi 1: Render Tombol Pilihan Rute (Gaya Kartu/Card)
+        // --- 4. RENDER TOMBOL (TANPA WAKTU) ---
         function renderRouteButtons(allRoutes, activeRank) {
             var container = document.getElementById('route-options-list');
-            if(!container) return; // Cegah error jika elemen tidak ada
+            if(!container) return; 
 
-            var speed = parseInt(document.getElementById('mode-select').value);
             var html = '';
 
             allRoutes.forEach(route => {
-                // Hitung waktu dinamis untuk tombol
-                var timeMin = Math.round((route.total_km / speed) * 60);
-                // Cek apakah ini rute yang sedang dilihat?
+                // TIDAK ADA PERHITUNGAN WAKTU LAGI DISINI
                 var isActive = (route.rank === activeRank) ? 'active' : '';
                 
-                // Gunakan single quote '' untuk string HTML agar aman saat memasukkan JSON string
                 html += `
                 <div class="route-card ${isActive}" onclick='pilihRuteOtomatis(${JSON.stringify(route)})'>
                     <div class="route-info">
@@ -395,26 +370,19 @@
                     </div>
                     <div class="route-meta">
                         <span class="route-dist">${route.total_km} km</span>
-                        <span class="route-time">⏱️ ${timeMin} mnt</span>
                     </div>
                 </div>`;
             });
             container.innerHTML = html;
         }
 
-        // Fungsi 2: Render Detail Urutan (Itinerary List)
+        // --- 5. RENDER DETAIL URUTAN ---
         function renderRouteDetails(route) {
-            var speed = parseInt(document.getElementById('mode-select').value);
             var listHtml = '<ol class="itinerary-list">';
             
             route.sequence_ids.forEach((id, idx) => {
-                // PERBAIKAN: Lookup menggunakan String(id) agar cocok dengan database
                 var name = globalPois[String(id)] || "Nama Tidak Ditemukan";
-                
-                // Format Label: "Start" untuk awal, "Tujuan 1", "Tujuan 2" dst.
                 var label = (idx === 0) ? "Start" : "Tujuan " + idx;
-                
-                // Hasil: "Tujuan 1 : Empat swalayan"
                 listHtml += `<li><b>${label} :</b> ${name}</li>`;
             });
             listHtml += '</ol>';
@@ -432,16 +400,12 @@
             }
         }
 
-        // Fungsi 3: Render Peta (GeoJSON)
         function tampilkanPeta(routeData) {
-            // Hapus layer lama jika ada
             if(routeLayer) map.removeLayer(routeLayer);
 
-            // Gambar rute baru dengan warna-warni segmen
             routeLayer = L.geoJSON(routeData.geojson, {
                 style: function(feature) {
                     var idx = feature.properties.segment_index;
-                    // Pilih warna berulang dari array segmentColors
                     var color = segmentColors[idx % segmentColors.length];
                     return { color: color, weight: 6, opacity: 0.9, lineCap: 'round' };
                 },
@@ -450,7 +414,6 @@
                 }
             }).addTo(map);
 
-            // Zoom peta agar rute terlihat semua
             map.fitBounds(routeLayer.getBounds(), {padding: [50,50]});
         }
     </script>
