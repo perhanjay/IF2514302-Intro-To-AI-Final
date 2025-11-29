@@ -375,6 +375,15 @@
             </select>
         </div>
 
+        <div class="control-group">
+            <label>⚙️ Algoritma Pencarian</label>
+            <select id="algo-select" class="form-select">
+                <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
+                <option value="astar">Hanya A* (A-Star)</option>
+                <option value="dijkstra">Hanya Dijkstra</option>
+            </select>
+        </div>
+
         <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
         
         <div id="loading" class="loading-overlay">
@@ -630,7 +639,6 @@
                 alert("Gagal menghubungi server.");
             });
         }
-
         function pilihRuteOtomatis(route) {
             currentRouteData = route; 
             renderRouteButtons(currentRoutesList, route.rank); 
