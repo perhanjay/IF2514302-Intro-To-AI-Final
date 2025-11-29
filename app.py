@@ -42,12 +42,13 @@ def api_route():
     # Terima data dari Frontend
     req = request.json
     start_id = req.get('start_id')
-    dest_ids = req.get('dest_ids') # List [1, 5, 10]
+    dest_ids = req.get('dest_ids')
+    mode = req.get('mode', 'astar')  # <--- TAMBAHAN: Tangkap Mode (Default A*)
 
-    print(f"🤖 Permintaan Rute: Start={start_id}, Dests={dest_ids}")
+    print(f"🤖 Permintaan Rute: Start={start_id}, Mode={mode}")
 
-    # PANGGIL LOGIKA BACKEND KAMU DI SINI
-    result = backend.solve_tour(G_global, pois_global, start_id, dest_ids)
+    # PANGGIL LOGIKA BACKEND (Kirim mode juga)
+    result = backend.solve_tour(G_global, pois_global, start_id, dest_ids, mode)
     
     return jsonify(result)
 

@@ -78,6 +78,12 @@
             transition: all 0.2s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         
+        .compare-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9em; }
+        .compare-table th { background: #f1f2f6; padding: 8px; text-align: center; border: 1px solid #ddd; color: #333; }
+        .compare-table td { padding: 8px; text-align: center; border: 1px solid #ddd; }
+        .winner { background-color: #d4edda; color: #155724; font-weight: bold; border-color: #c3e6cb; }
+        .winner::after { content: " 🏆"; } /* Ikon piala otomatis */
+
         .route-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.08); border-color: #3498db; }
         
         /* State Aktif */
@@ -136,6 +142,15 @@
                 <option value="40">Mobil (40 km/jam)</option>
                 <option value="30" selected>Motor (30 km/jam)</option>
                 <option value="4">Jalan Kaki (4 km/jam)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>⚙️ Algoritma Pencarian</label>
+            <select id="algo-select" class="form-select">
+                <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
+                <option value="astar">Hanya A* (A-Star)</option>
+                <option value="dijkstra">Hanya Dijkstra</option>
             </select>
         </div>
 
@@ -255,6 +270,7 @@
         function hitungRute() {
             var startId = tsStart.getValue();
             var destIds = tsDest.getValue();
+            var mode = document.getElementById('algo-select').value; // Ambil mode algoritma
 
             if (!startId || destIds.length === 0) {
                 alert("Pilih minimal 1 titik awal dan 1 destinasi!");
@@ -270,27 +286,76 @@
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     start_id: parseInt(startId),
-                    dest_ids: destIds.map(id => parseInt(id))
+                    dest_ids: destIds.map(id => parseInt(id)),
+                    mode: mode // Kirim mode ke server
                 })
             })
             .then(res => res.json())
             .then(data => {
                 document.getElementById('loading').style.display = 'none';
                 
-                if (data.error) {
-                    alert("Error: " + data.error);
-                    return;
-                }
+                if (data.error) { alert("Error: " + data.error); return; }
 
-                currentRoutesList = data.routes; // Simpan list global
-                
-                // Tampilkan UI
                 document.getElementById('result-card').style.display = 'block';
+                var container = document.getElementById('route-options-list');
+                var details = document.getElementById('route-details-placeholder');
+
+                // --- LOGIKA UTAMA: BANDINGKAN vs SINGLE ---
+                if (data.mode === 'compare') {
+                    // 1. MODE BANDINGKAN
+                    var astar = data.astar;
+                    var dijkstra = data.dijkstra;
+                    
+                    // Tampilkan Peta dari A* (biasanya jalurnya sama/mirip)
+                    tampilkanPeta(astar);
+
+                    // Buat Tabel Perbandingan
+                    var aTime = astar.stats.time_ms;
+                    var dTime = dijkstra.stats.time_ms;
+                    var aNodes = astar.stats.nodes_visited;
+                    var dNodes = dijkstra.stats.nodes_visited;
+
+                    container.innerHTML = `
+                        <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">🆚 Hasil Benchmark:</div>
+                        <table class="compare-table">
+                            <thead>
+                                <tr>
+                                    <th>Metrik</th>
+                                    <th>A* (Smart)</th>
+                                    <th>Dijkstra (Blind)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Total Jarak</td>
+                                    <td>${astar.total_km} km</td>
+                                    <td>${dijkstra.total_km} km</td>
+                                </tr>
+                                <tr>
+                                    <td>Waktu (Server)</td>
+                                    <td class="${aTime <= dTime ? 'winner' : ''}">${aTime} ms</td>
+                                    <td class="${dTime < aTime ? 'winner' : ''}">${dTime} ms</td>
+                                </tr>
+                                <tr>
+                                    <td>Efisiensi<br><small>(Nodes Dicek)</small></td>
+                                    <td class="${aNodes <= dNodes ? 'winner' : ''}">${aNodes}</td>
+                                    <td class="${dNodes < aNodes ? 'winner' : ''}">${dNodes}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top:15px; font-size:0.85em; color:#555; background:#e8f4f8; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
+                            💡 <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
+                        </div>
+                    `;
+                    details.innerHTML = ''; // Kosongkan detail urutan (fokus ke tabel)
+
+                } else {
+                    // 2. MODE BIASA (Single Route)
+                    currentRoutesList = data.routes;
+                    // Tampilkan tombol opsi rute seperti biasa
+                    pilihRuteOtomatis(data.routes[0]);
+                }
                 
-                // Pilih rute pertama secara otomatis
-                pilihRuteOtomatis(data.routes[0]);
-                
-                // Tutup sidebar mobile jika perlu
                 if(window.innerWidth <= 768) document.body.classList.remove('mobile-open');
             })
             .catch(err => {
@@ -299,7 +364,6 @@
                 alert("Gagal menghubungi server.");
             });
         }
-
         // Fungsi Wrapper untuk memanggil logika render
         function pilihRuteOtomatis(route) {
             currentRouteData = route; // Simpan state rute yang aktif
