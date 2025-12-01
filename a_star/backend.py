@@ -7,16 +7,11 @@ import time
 from collections import defaultdict
 import os
 
-# ==========================================
-# 1. ALGORITMA KUSTOM (TIDAK DIUBAH)
-# ==========================================
-
 def my_astar(G, source, target, heuristic_func, weight='length'):
     """
     Implementasi A* Generik (Bisa jadi Dijkstra jika heuristic_func return 0).
     Mengembalikan: (total_length, path, nodes_visited_count)
     """
-    # --- Fungsi nested reconstruct_path TETAP SAMA ---
     def reconstruct_path(current):
         path = [current]
         while current in came_from:
@@ -25,11 +20,9 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
         path.reverse()
         return path
     
-    # Counter untuk metrik perbandingan
     nodes_visited_count = 0 
     
     open_set = []
-    # Perhatikan: parameter heuristik sekarang dinamis (heuristic_func)
     heapq.heappush(open_set, (heuristic_func(source, target, G), source)) 
     
     came_from = {}
@@ -43,7 +36,6 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
         if current == target:
             path = reconstruct_path(current)
             total_length = g_score[target]
-            # KEMBALIKAN 3 NILAI: Jarak, Jalur, Jumlah Node
             return total_length, path, nodes_visited_count
 
         for neighbor, edge_data_dict in G.adj[current].items():
@@ -60,7 +52,6 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
             if tentative_g_score < g_score[neighbor]:
                 came_from[neighbor] = current
                 g_score[neighbor] = tentative_g_score
-                # Panggil fungsi heuristik dinamis
                 f_score = tentative_g_score + heuristic_func(neighbor, target, G)
                 heapq.heappush(open_set, (f_score, neighbor))
     
@@ -104,7 +95,7 @@ def heuristic_dist(u, v, G):
 
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    R = 6371000 # Jari-jari bumi dalam meter
+    R = 6371000 
     distance = R * c
 
     return distance
@@ -116,18 +107,12 @@ def heuristic_zero(u, v, G):
     """
     return 0
 
-# ==========================================
-# 2. FUNGSI INTEGRASI FLASK & LOGIKA UTAMA
-# ==========================================
-
 def load_data_initial():
     """
     Memuat data Graph dan POI ke memori. Dipanggil oleh Flask saat startup.
     """
     print("🔄 [Backend] Memuat data graph & POI...")
     try:
-        # Sesuaikan path file jika perlu (misal tambahkan 'data/' jika di folder data)
-        # Cek apakah file ada di folder root atau subfolder 'data'
         path_graph = "data/balikpapan_jalan.graphml"
         path_pois = "data/balikpapan_pois.gpkg"
         

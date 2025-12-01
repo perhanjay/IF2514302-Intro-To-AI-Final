@@ -446,6 +446,10 @@
         function initApp(pois) {
             allPoisData = pois; // Simpan ke variabel global
             
+            pois.forEach(p => {
+                globalPois[String(p.id)] = p.name; 
+            });
+
             // 1. ISI DROPDOWN KATEGORI OTOMATIS
             var categories = new Set(pois.map(p => p.category));
             var catSelect = document.getElementById('category-filter');
