@@ -18,6 +18,9 @@
 
         var tsStart, tsDest;
 
+        let isBlockMode = false;
+        let blockedMarkers = [];
+
         document.addEventListener('DOMContentLoaded', function() {
             const toggleBtn = document.getElementById('sidebarToggle');
             const body = document.body;
@@ -322,4 +325,66 @@
             }).addTo(map);
 
             map.fitBounds(routeLayer.getBounds(), {padding: [50,50]});
+        }
+
+        function toggleBlockMode() {
+            isBlockMode = !isBlockMode;
+            const btn = document.getElementById('btn-toggle-block');
+            const info = document.getElementById('block-info');
+                
+            if (isBlockMode) {
+                btn.innerHTML = "MODE POHON TUMBANG: ON 🌲";
+                btn.classList.add('active');
+                document.getElementById('map').style.cursor = "crosshair";
+                info.style.display = "block";
+            } else {
+                btn.innerHTML = "Mode Pohon Tumbang: OFF";
+                btn.classList.remove('active');
+                document.getElementById('map').style.cursor = "";
+                info.style.display = "none";
+            }
+        }
+        
+        // Event Klik Peta
+        map.on('click', function(e) {
+            if (!isBlockMode) return;
+        
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+        
+            // Tambah marker merah visual
+            const m = L.circleMarker([lat, lng], {
+                color: 'red', fillColor: '#f03', fillOpacity: 0.8, radius: 8
+            }).addTo(map);
+            m.bindPopup("⛔ JALAN DIBLOKIR").openPopup();
+            blockedMarkers.push(m);
+        
+            // Kirim ke Backend
+            fetch('/api/block_road', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lat: lat, lon: lng})
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Blokir sukses:", data);
+                // Otomatis refresh rute jika sudah ada hasil sebelumnya
+                if (document.getElementById('result-card').style.display !== 'none') {
+                    hitungRute(); 
+                }
+            });
+        });
+        
+        function resetBlockages() {
+            fetch('/api/reset_blocks', { method: 'POST' })
+            .then(res => res.json())
+            .then(() => {
+                blockedMarkers.forEach(m => map.removeLayer(m));
+                blockedMarkers = [];
+                alert("Semua blokiran dihapus.");
+                if(isBlockMode) toggleBlockMode(); // Matikan mode
+                // Refresh rute
+                if (document.getElementById('result-card').style.display !== 'none') {
+                    hitungRute(); 
+                }
+            });
         }

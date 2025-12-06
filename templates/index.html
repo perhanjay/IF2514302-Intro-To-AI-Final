@@ -47,6 +47,21 @@
             </select>
         </div>
 
+        <div class="blockage-panel">
+            <h4>🚧 Simulasi Gangguan</h4>
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-toggle-block" class="btn-block" onclick="toggleBlockMode()">
+                    Mode Pohon Tumbang: OFF
+                </button>
+                <button id="btn-reset-block" class="btn-reset" onclick="resetBlockages()" title="Reset">
+                    🔄
+                </button>
+            </div>
+            <p id="block-info" style="font-size: 0.8em; color: #e74c3c; margin-top: 5px; display: none;">
+                Klik pada jalan di peta untuk memblokirnya.
+            </p>
+        </div>
+
 
         <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
         
