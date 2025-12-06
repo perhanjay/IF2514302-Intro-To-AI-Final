@@ -6,6 +6,41 @@ import json
 import time
 from collections import defaultdict
 
+BLOCKED_EDGES = []
+
+def add_blockage_by_coord(G, lat, lon):
+    """
+    ### BARU: Menerima lat/lon, mencari edge terdekat, dan menyimpannya ke memori.
+    """
+
+    try:
+        u,v,key = ox.nearest_edges(G, X=lon, Y=lat)
+
+        block_count = 0
+
+        if (u,v) not in BLOCKED_EDGES:
+            BLOCKED_EDGES.append((u, v))
+            block_count += 1
+
+        if (v, u) not in BLOCKED_EDGES:
+            BLOCKED_EDGES.append((v, u))
+            block_count += 1
+
+        print(f"🚫 [Backend] Jalan diblokir di node: {u} <-> {v}")
+        return {"status": "success", "blocked_nodes": [u, v]}
+    
+    except Exception as e:
+        print(f"❌ [Backend] Gagal memblokir: {e}")
+        return {"status": "error", "message": str(e)}
+    
+def reset_blockages():
+    """RESET ALL BLOCKAGES"""
+    global BLOCKED_EDGES
+    BLOCKED_EDGES = []
+    print("Semua Blokiran dihapus.")
+    return {"status": "success"}
+
+
 def my_astar(G, source, target, heuristic_func, weight='length'):
     """
     Implementasi A* Generik (Bisa jadi Dijkstra jika heuristic_func return 0).
@@ -156,6 +191,15 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
     Fungsi Solver dengan Mode Perbandingan (Compare Mode).
     """
     print(f"🚀 [Backend] Mode: {algo_mode}. Start: {start_id}, Dest: {dest_ids}")
+
+    G_active = G
+
+    if BLOCKED_EDGES:
+        print(f"⚠️ [Solver] Menerapkan {len(BLOCKED_EDGES)} aturan blokir jalan...")
+        G_active = G.copy()
+        for u, v in BLOCKED_EDGES:
+            if G_active.has_edge(u,v):
+                G_active.remove_edge(u, v)
     
     # --- HELPER: Jalankan TSP untuk satu jenis algoritma ---
     def run_tsp(heuristic_func):
@@ -167,7 +211,7 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         dest_points = pois.iloc[dest_ids].geometry
         all_points = [start_point] + list(dest_points)
         
-        raw_nodes = ox.nearest_nodes(G, X=[p.x for p in all_points], Y=[p.y for p in all_points])
+        raw_nodes = ox.nearest_nodes(G_active, X=[p.x for p in all_points], Y=[p.y for p in all_points])
         all_nodes = [int(n) for n in raw_nodes]
         start_node = all_nodes[0]
         dest_nodes = all_nodes[1:]
@@ -186,7 +230,7 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
                 if u == v:
                     distances[u][v] = 0; continue
                 
-                length, path, visited = my_astar(G, u, v, heuristic_func)
+                length, path, visited = my_astar(G_active, u, v, heuristic_func)
                 distances[u][v] = length if path else float('inf')
                 total_nodes_visited += visited
 
@@ -220,11 +264,11 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         for i in range(len(full_poi_path) - 1):
             u_node = poi_to_node[full_poi_path[i]]
             v_node = poi_to_node[full_poi_path[i+1]]
-            _, seg_path, _ = my_astar(G, u_node, v_node, heuristic_func)
+            _, seg_path, _ = my_astar(G_active, u_node, v_node, heuristic_func)
             
             if seg_path:
                 full_node_path.extend(seg_path) # <--- TAMBAHAN PENTING 2
-                coords = [[G.nodes[n]['x'], G.nodes[n]['y']] for n in seg_path]
+                coords = [[G_active.nodes[n]['x'], G_active.nodes[n]['y']] for n in seg_path]
                 features.append({
                     "type": "Feature",
                     "properties": {"segment_index": i},
@@ -276,6 +320,11 @@ def get_alternative_routes(G, pois, start_id, dest_ids, mode='astar', k=3):
     """
     results = []
     G_temp = G.copy() # Copy agar graph asli tidak rusak
+
+    if BLOCKED_EDGES:
+        for u, v in BLOCKED_EDGES:
+            if G_temp.has_edge(u, v): G_temp.remove_edge(u, v) 
+
     penalty_factor = 2.0 # Bobot hukuman (semakin besar, semakin 'menghindar')
 
     print(f"🔄 [Backend] Mencari {k} alternatif rute...")

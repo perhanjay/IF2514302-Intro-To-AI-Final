@@ -101,6 +101,26 @@ def api_route():
             "mode": "single", 
             "routes": routes_list
         })
+
+@app.route('/api/block_road', methods=['POST'])
+def block_road():
+    try:
+        data = request.json
+        lat = data.get('lat')
+        lon = data.get('lon')
+
+        result = backend.add_blockage_by_coord(G_global, lat, lon)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/api/reset_blocks', methods=['POST'])
+def reset_blocks():
+    try:
+        result = backend.reset_blockages()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
     
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
