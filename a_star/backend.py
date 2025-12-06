@@ -5,7 +5,6 @@ import math
 import json
 import time
 from collections import defaultdict
-import os
 
 def my_astar(G, source, target, heuristic_func, weight='length'):
     """
