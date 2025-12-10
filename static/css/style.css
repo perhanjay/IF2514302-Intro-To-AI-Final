@@ -1,385 +1,508 @@
-        /* --- 1. LAYOUT UTAMA --- */
-        body { 
-            display: flex; margin: 0; padding: 0; height: 100vh; overflow: hidden; 
-            font-family: 'Poppins', sans-serif; /* Ganti font disini */
-            background-color: #f4f7f6; 
-            color: #333;
-        }
+:root {
+    --primary-color: #2563eb; /* Royal Blue */
+    --accent-color: #3b82f6;
+    --text-dark: #1e293b;
+    --text-light: #64748b;
+    --bg-glass: rgba(255, 255, 255, 0.90);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --radius-xl: 16px;
+    --radius-md: 8px;
+}
 
-        #sidebar { 
-            width: 400px; /* Sedikit diperlebar agar lega */
-            height: 100%; 
-            background: #ffffff; 
-            z-index: 1000; 
-            padding: 20px; 
-            box-shadow: 2px 0 10px rgba(0,0,0,0.05); 
-            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1); 
-            position: relative; 
-            overflow-y: auto; 
-            box-sizing: border-box; 
-        }
-        
-        h2 { 
-            margin-top: 0; color: #2c3e50; font-size: 1.5rem; font-weight: 700; 
-            letter-spacing: -0.5px; margin-bottom: 25px; 
-        }
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    color: var(--text-dark);
+    overflow: hidden;
+}
 
-        #map { flex-grow: 1; height: 100%; transition: margin-left 0.3s ease; z-index: 1; }
+/* --- MAP LAYER --- */
+#map {
+    height: 100vh;
+    width: 100%;
+    z-index: 1;
+}
 
-        /* --- 2. TOMBOL TOGGLE SIDEBAR --- */
-        .toggle-btn { 
-            position: absolute; top: 15px; left: 395px; z-index: 1001; 
-            background: white; border: 1px solid #ddd; border-radius: 50%; 
-            width: 40px; height: 40px; cursor: pointer; 
-            font-size: 1.2rem; color: #555; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-            transition: left 0.3s ease; 
-            display: flex; align-items: center; justify-content: center;
-        }
-        .toggle-btn:hover { background: #f0f0f0; }
-
-        /* --- 3. STATE SIDEBAR --- */
-        body.sidebar-closed #sidebar { transform: translateX(-380px); position: absolute; }
-        body.sidebar-closed #map { width: 100%; margin-left: 0; }
-        body.sidebar-closed .toggle-btn { left: 15px; }
-
-        /* --- 4. STYLE FORM --- */
-        h2 { margin-top: 0; color: #2c3e50; font-size: 1.4rem; font-weight: 700; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 20px; }
-        .control-group { margin-bottom: 15px; }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #34495e;
-            font-size: 0.9rem;
-            letter-spacing: 0.3px;
-        }
-        
-        /* --- HARMONISASI DROPDOWN (ALGORITMA vs TOMSELECT) --- */
-
-        /* 1. Reset Dasar untuk Semua Input Dropdown */
-        .form-select, .ts-control {
-            width: 100%;
-            min-height: 48px; /* Pastikan tingginya sama persis */
-            padding: 10px 15px; /* Padding identik */
-            font-size: 14px;
-            font-family: 'Poppins', sans-serif;
-            color: #333;
-            background-color: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px; /* Sudut membulat sama */
-            box-sizing: border-box; /* Agar padding tidak menambah lebar */
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* 2. Styling Khusus Dropdown Algoritma (Select Standar) */
-        .form-select { 
-            appearance: none; /* Hilangkan style bawaan browser */
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            outline: none;
-            cursor: pointer;
-            
-            /* Ikon Panah Kustom (Mirip TomSelect) */
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233498db' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 16px;
-            padding-right: 40px; /* Beri ruang untuk ikon panah */
-        }
-
-        /* Efek Focus (Glow Biru) - Disamakan */
-        .form-select:focus, .ts-control.focus {
-            border-color: #3498db !important;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15) !important;
-        }
-
-        /* 3. Penyesuaian Paksa untuk TomSelect agar menuruti CSS di atas */
-        .ts-control {
-            display: flex !important;
-            align-items: center !important;
-            box-shadow: none !important;
-            padding-right: 35px !important; /* Ruang untuk panah bawaan TomSelect */
-        }
-        
-        /* Input teks di dalam TomSelect */
-        .ts-control > input {
-            font-family: 'Poppins', sans-serif !important;
-            font-size: 14px !important;
-            color: #333 !important;
-        }
-
-        /* Item yang dipilih (Chip Biru) */
-        .ts-wrapper.multi .ts-control > div {
-            background: #f0f9ff !important;
-            color: #2980b9 !important;
-            border: 1px solid #bde0fe !important;
-            border-radius: 6px !important;
-            padding: 3px 10px !important;
-            margin-right: 5px !important;
-        }
-
-        /* Dropdown Menu yang muncul saat diklik */
-        .ts-dropdown {
-            border-radius: 12px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important;
-            border: 1px solid #f0f0f0 !important;
-            margin-top: 8px !important;
-            padding: 0 !important;
-            overflow: hidden !important;
-            z-index: 2000 !important;
-        }
-        
-        .ts-dropdown .option {
-            padding: 12px 15px !important;
-            font-size: 14px !important;
-            cursor: pointer !important;
-        }
-        
-        .ts-dropdown .active {
-            background-color: #f8f9fa !important;
-            color: #3498db !important;
-            font-weight: 600 !important;
-        }
-
-        #btn-cari { 
-            width: 100%; padding: 14px; 
-            background: linear-gradient(135deg, #3498db, #2980b9); /* Gradasi warna */
-            color: white; border: none; border-radius: 12px; 
-            font-size: 16px; font-weight: 600; cursor: pointer; 
-            transition: all 0.3s ease; margin-top: 15px; 
-            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.2);
-        }
-        #btn-cari:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(52, 152, 219, 0.3); }
-        #btn-cari:active { transform: scale(0.98); }
-
-        .loading { display: none; text-align: center; margin: 15px 0; color: #7f8c8d; font-style: italic; font-size: 0.9rem; }
-
-        /* --- 5. STYLE TOMBOL RUTE (CARD STYLE) --- */
-        #result-card { display: none; margin-top: 25px; border-top: 2px solid #f0f0f0; padding-top: 15px; }
-        
-        .route-card {
-            display: flex; justify-content: space-between; align-items: center;
-            background: white; border: 1px solid #f0f0f0; border-radius: 12px;
-            padding: 15px 20px; margin-bottom: 12px; cursor: pointer;
-            transition: all 0.2s ease; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02); /* Shadow tipis */
-        }
-        
-        .compare-table { 
-            width: 100%; 
-            border-collapse: separate; /* Penting agar border-radius bekerja */
-            border-spacing: 0; 
-            margin-top: 15px; 
-            font-size: 0.95rem; 
-            background: white;
-            border-radius: 12px; /* Sudut membulat konsisten */
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Shadow lembut */
-            overflow: hidden; /* Agar anak elemen tidak menembus sudut bulat */
-            border: 1px solid #f0f0f0;
-        }
-
-        /* Header Tabel */
-        .compare-table th { 
-            background: #f8f9fa; /* Warna abu muda modern */
-            padding: 15px; 
-            text-align: center; 
-            color: #2c3e50;
-            font-weight: 600;
-            border-bottom: 2px solid #eaeaea;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-        }
-
-        /* Sel Data */
-        .compare-table td { 
-            padding: 15px; 
-            text-align: center; 
-            border-bottom: 1px solid #f0f0f0;
-            color: #555;
-        }
-
-        /* Baris terakhir tidak perlu garis bawah */
-        .compare-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        /* Efek Hover pada Baris */
-        .compare-table tbody tr:hover {
-            background-color: #fcfcfc;
-        }
-
-        /* --- HIGHLIGHT PEMENANG (WINNER) --- */
-        .winner { 
-            background-color: #e6fffa !important; /* Hijau mint lembut */
-            color: #00b894; /* Teks hijau modern */
-            font-weight: 700; 
-            position: relative;
-        }
-        
-        /* Menambah ikon piala kecil secara otomatis */
-        .winner::before {
-            content: "✨";
-            margin-right: 5px;
-            font-size: 1.1em;
-        }
-
-        .route-card:hover { 
-            border-color: #3498db; transform: translateY(-3px); 
-            box-shadow: 0 8px 15px rgba(0,0,0,0.05); 
-        }
-        .route-card.active {
-            background-color: #f0f9ff; 
-            border: 1px solid #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-        }
-
-        .route-info h4 { margin: 0; font-size: 1rem; color: #2c3e50; }
-        .route-info p { margin: 3px 0 0 0; font-size: 0.85rem; color: #7f8c8d; }
-        .route-meta { text-align: right; }
-        .route-dist { font-size: 1.2rem; font-weight: 700; color: #27ae60; }
-        .route-time { font-size: 0.85rem; color: #e67e22; font-weight: 600; }
-
-        .timeline-box { margin-top: 25px; padding-left: 10px; }
+/* --- FLOATING SIDEBAR (Modern UI) --- */
+#sidebar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 380px;
+    max-height: 90vh;
     
-        .timeline-item {
-            position: relative;
-            padding-left: 30px;
-            padding-bottom: 25px;
-            border-left: 2px solid #e0e0e0; /* Garis vertikal */
-        }
-        .timeline-item:last-child { border-left: none; padding-bottom: 0; }
-        
-        .timeline-marker {
-            position: absolute; left: -9px; top: 0;
-            width: 16px; height: 16px; border-radius: 50%;
-            background: #fff; border: 3px solid #bdc3c7;
-            box-shadow: 0 0 0 2px white;
-        }
-        
-        /* Warna marker berbeda untuk Start (Merah) & Tujuan (Biru) */
-        .timeline-item.start .timeline-marker { border-color: #e74c3c; background: #e74c3c; }
-        .timeline-item.dest .timeline-marker { border-color: #3498db; background: #3498db; }
-        
-        .timeline-content h4 { margin: 0 0 4px 0; font-size: 0.9rem; color: #7f8c8d; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
-        .timeline-content p { margin: 0; font-size: 1rem; font-weight: 600; color: #2c3e50; }
+    /* Efek Glassmorphism */
+    background: var(--bg-glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-xl);
+    
+    padding: 24px;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: transform 0.3s ease-in-out;
+}
 
-        /* Style List Urutan */
-        .itinerary-box { background: #fafafa; border-radius: 8px; padding: 15px; margin-top: 15px; border: 1px solid #eee; }
-        .itinerary-list { margin: 0; padding-left: 20px; font-size: 0.9rem; color: #555; }
-        .itinerary-list li { margin-bottom: 8px; line-height: 1.4; }
-        .itinerary-list li b { color: #333; }
+/* Hide Scrollbar but keep functionality */
+#sidebar::-webkit-scrollbar { width: 6px; }
+#sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* --- 6. LEAFLET CONTROL FIX --- */
-        .leaflet-popup-content-wrapper {
-            border-radius: 12px !important;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-            font-family: 'Poppins', sans-serif !important;
-        }
-        .leaflet-popup-content {
-            margin: 15px !important;
-            font-size: 13px !important;
-            color: #2c3e50;
-        }
-        .leaflet-popup-tip {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
-        }
+#sidebar h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--primary-color);
+}
 
-        /* --- 7. RESPONSIF --- */
-        @media (max-width: 768px) {
-            #sidebar { position: absolute; width: 90%; max-width: 320px; height: 100%; left: 0; top: 0; transform: translateX(-100%); }
-            .toggle-btn { left: 15px; top: 15px; }
-            body.mobile-open #sidebar { transform: translateX(0) !important; box-shadow: 5px 0 20px rgba(0,0,0,0.2); }
-            body.mobile-open .toggle-btn { left: calc(90% + 10px); }
-            #map { width: 100% !important; margin-left: 0 !important; }
-        }
+#sidebar > p {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #bdc3c7; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #95a5a6; }
+/* --- FORM ELEMENTS --- */
+.control-group { margin-bottom: 16px; }
 
-        /* 2. Loading Spinner Overlay (Lebih profesional) */
-        .loading-overlay {
-            display: none; /* Default sembunyi */
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.85);
-            z-index: 2000;
-            justify-content: center; align-items: center; flex-direction: column;
-            backdrop-filter: blur(2px); /* Efek blur di belakangnya */
-            border-radius: 12px; /* Ikuti border sidebar */
-        }
-        
-        .spinner {
-            width: 40px; height: 40px;
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 15px;
-        }
-        
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .loading-text { font-weight: 600; color: #3498db; letter-spacing: 0.5px; }
+.control-group label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-light);
+    margin-bottom: 6px;
+}
 
-        /* --- COPY KODE CSS LAMA ANDA, LALU TAMBAHKAN BAGIAN INI --- */
+/* Style untuk Dropdown & TomSelect */
+.form-select, .ts-control {
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 10px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.2s;
+}
+.form-select:focus, .ts-control.focus .ts-input {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
 
-        /* Style Panel Blokiran */
-        .blockage-panel {
-            background: #fff5f5;
-            border: 1px dashed #ff9b9b;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        .blockage-panel h4 {
-            margin: 0 0 10px 0;
-            font-size: 0.9rem;
-            color: #c0392b;
-        }
-        
-        /* Tombol Mode Pohon Tumbang */
-        .btn-block {
-            flex-grow: 1;
-            padding: 8px;
-            background: #ecf0f1;
-            color: #7f8c8d;
-            border: 1px solid #bdc3c7;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-        }
-        
-        .btn-block.active {
-            background: #e74c3c;
-            color: white;
-            border-color: #c0392b;
-            animation: pulse 1s infinite;
-        }
-        
-        /* Tombol Reset Kecil */
-        .btn-reset {
-            width: 40px;
-            background: #fff;
-            border: 1px solid #bdc3c7;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            color: #333;
-            transition: all 0.2s;
-        }
-        .btn-reset:hover {
-            background: #ecf0f1;
-            transform: rotate(180deg);
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
+/* Custom TomSelect adjustments */
+.ts-control { padding: 8px 12px !important; border-radius: var(--radius-md) !important; }
+.ts-dropdown { border-radius: var(--radius-md) !important; box-shadow: var(--shadow-lg) !important; border: none !important; margin-top: 4px !important; }
+
+/* --- BUTTONS --- */
+button { font-family: 'Poppins', sans-serif; cursor: pointer; transition: all 0.2s; border: none; }
+
+#btn-cari {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    color: white;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+}
+#btn-cari:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(37, 99, 235, 0.3); }
+#btn-cari:active { transform: translateY(0); }
+
+/* --- BLOCKAGE PANEL --- */
+.blockage-panel {
+    background: #fff1f2;
+    border: 1px dashed #fda4af;
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin-bottom: 20px;
+}
+.blockage-panel h4 { margin: 0 0 8px 0; font-size: 0.85rem; color: #be123c; }
+
+.btn-block {
+    flex: 1; padding: 8px; font-size: 0.8rem; border-radius: 6px;
+    background: white; border: 1px solid #fda4af; color: #be123c;
+}
+.btn-block.active { background: #be123c; color: white; border-color: #be123c; }
+.btn-reset { width: 36px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; }
+
+/* --- RESULT CARD --- */
+#result-card {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px dashed #e2e8f0;
+    display: none;
+    animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Route Item */
+.route-card {
+    background: white;
+    padding: 14px;
+    border: 1px solid #f1f5f9;
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.route-card:hover { border-color: var(--primary-color); background: #eff6ff; }
+.route-card.active { border: 2px solid var(--primary-color); background: #eff6ff; }
+
+.route-dist {
+    background: #dbeafe; color: #1e40af;
+    padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700;
+}
+
+/* Timeline/Urutan Perjalanan */
+.timeline-box { position: relative; padding-left: 24px; margin-top: 16px; }
+.timeline-box::before {
+    content: ''; position: absolute; left: 9px; top: 8px; bottom: 8px;
+    width: 2px; background: #e2e8f0;
+}
+.timeline-item { position: relative; margin-bottom: 16px; }
+.timeline-marker {
+    position: absolute; left: -24px; top: 2px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: white; border: 4px solid #cbd5e1;
+}
+.timeline-item.start .timeline-marker { border-color: #10b981; } /* Hijau */
+.timeline-item.dest .timeline-marker { border-color: var(--primary-color); } /* Biru */
+
+.timeline-content h4 { margin: 0; font-size: 0.75rem; color: var(--text-light); text-transform: uppercase; }
+.timeline-content p { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--text-dark); }
+
+/* --- RESPONSIVE MOBILE --- */
+#sidebarToggle {
+    position: fixed; top: 20px; left: 20px; z-index: 1100;
+    background: white; border: none; padding: 10px; border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: none;
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        top: auto; bottom: 0; left: 0; width: 100%; max-height: 60vh;
+        border-radius: 20px 20px 0 0; transform: translateY(110%);
+    }
+    body.mobile-open #sidebar { transform: translateY(0); }
+    #sidebarToggle { display: block; }
+}
+
+/* --- STYLE BARU UNTUK LAYOUT --- */
+
+/* Grouping Visual */
+.section-group {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Accordion (Details & Summary) */
+details.advanced-options {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: var(--radius-md);
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+details.advanced-options[open] {
+    background: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+details.advanced-options summary {
+    padding: 12px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    list-style: none; /* Hilangkan panah default browser */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Custom Arrow untuk Summary */
+details.advanced-options summary::after {
+    content: '+';
+    font-size: 1.2rem;
+    font-weight: 300;
+    transition: transform 0.2s;
+}
+
+details.advanced-options[open] summary::after {
+    transform: rotate(45deg); /* Berubah jadi silang (x) saat dibuka */
+}
+
+details.advanced-options summary:hover {
+    background: rgba(37, 99, 235, 0.05);
+    color: var(--primary-color);
+}
+
+.details-content {
+    padding: 12px;
+    padding-top: 0;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 8px;
+    padding-top: 12px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Header Sedikit Dirapikan */
+.sidebar-header {
+    margin-bottom: 20px;
+}
+.sidebar-header h2 { margin-bottom: 4px; }
+.sidebar-header p { margin: 0; font-size: 0.85rem; color: var(--text-light); }
+
+/* --- LEAFLET CONTROL CUSTOMIZATION --- */
+
+/* 1. Hapus style kotak bawaan Leaflet & tambahkan Glassmorphism */
+.leaflet-bar {
+    border: none !important;
+    box-shadow: var(--shadow-lg) !important;
+    border-radius: var(--radius-md) !important;
+}
+
+.leaflet-bar a {
+    background-color: var(--bg-glass) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--primary-color) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.1) !important;
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 16px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Radius untuk tombol atas (Zoom In) */
+.leaflet-bar a:first-child {
+    border-top-left-radius: var(--radius-md) !important;
+    border-top-right-radius: var(--radius-md) !important;
+}
+
+/* Radius untuk tombol bawah (Zoom Out) */
+.leaflet-bar a:last-child {
+    border-bottom-left-radius: var(--radius-md) !important;
+    border-bottom-right-radius: var(--radius-md) !important;
+    border-bottom: none !important;
+}
+
+/* Efek Hover (Biru) */
+.leaflet-bar a:hover {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+
+/* 2. Kustomisasi Ikon Layer (Terrain/Satelit) */
+.leaflet-control-layers {
+    border: none !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-lg) !important;
+    background: var(--bg-glass) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 6px !important;
+    color: var(--text-dark);
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 0.85rem !important;
+}
+
+/* Ikon tumpukan kertas (saat menu tertutup) */
+.leaflet-control-layers-toggle {
+    width: 44px !important;
+    height: 44px !important;
+    background-size: 20px !important; /* Perkecil ikon bawaan */
+    transition: all 0.2s;
+    border-radius: var(--radius-md);
+}
+
+.leaflet-control-layers-toggle:hover {
+    background-color: rgba(37, 99, 235, 0.1); /* Biru transparan */
+}
+
+/* Isi menu saat dibuka */
+.leaflet-control-layers-expanded {
+    padding: 12px 16px !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Style label (teks pilihan peta) */
+.leaflet-control-layers-list label {
+    margin-bottom: 6px;
+    cursor: pointer;
+    display: flex !important;
+    align-items: center;
+}
+
+.leaflet-control-layers-list span {
+    margin-left: 6px;
+    font-weight: 500;
+}
+
+/* 3. Posisikan Control agar lebih rapi (beri jarak dari tepi) */
+.leaflet-top.leaflet-right {
+    top: 10px !important;
+    right: 10px !important;
+}
+.leaflet-control-zoom {
+    margin-top: 10px !important; /* Jarak antara Layer & Zoom */
+}
+
+/* --- FIX: Z-INDEX & VISIBILITY --- */
+
+/* 1. Pastikan Tombol Menu (☰) BENAR-BENAR HILANG saat Sidebar Terbuka di Desktop */
+@media (min-width: 769px) {
+    /* Default: Tombol menu sembunyi */
+    #sidebarToggle {
+        display: none; 
+        opacity: 0;
+        pointer-events: none; /* Agar tidak bisa diklik saat invisible */
+    }
+
+    /* KECUALI: Saat body punya class 'sidebar-hidden' (Sidebar ditutup user) */
+    body.sidebar-hidden #sidebarToggle {
+        display: flex !important;
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
+
+/* 2. Pastikan Tombol Menu tidak menutupi Kontrol Zoom (Jika ada di kiri) */
+/* Geser tombol Zoom ke bawah sedikit jika di kiri, atau pastikan toggle di atasnya */
+.leaflet-top.leaflet-left {
+    transition: top 0.3s ease, left 0.3s ease;
+    z-index: 900; /* Di bawah sidebar/toggle */
+}
+
+/* Jika sidebar tertutup, geser kontrol peta ke kanan agar tidak tertabrak tombol menu */
+body.sidebar-hidden .leaflet-top.leaflet-left {
+    left: 70px !important; /* Memberi jarak aman dari tombol menu */
+}
+
+/* 3. Perbaikan Posisi Tombol Close Sidebar (◀) agar tidak menutupi Judul */
+.sidebar-header {
+    /* Pastikan header punya ruang cukup */
+    position: relative;
+    padding-right: 0; 
+}
+
+/* Pastikan judul tidak terlalu lebar menabrak tombol */
+.sidebar-header h2 {
+    max-width: 85%; /* Sisakan ruang 15% untuk tombol close */
+    line-height: 1.2;
+}
+
+/* --- FIX MOBILE (HP) --- */
+@media (max-width: 768px) {
+    /* Di HP, tombol menu SELALU ada di pojok kiri atas */
+    #sidebarToggle {
+        display: flex !important; 
+        opacity: 1;
+        pointer-events: auto;
+        top: 20px;
+        left: 20px;
+    }
+
+    /* Sidebar di HP ada di bawah (Bottom Sheet), jadi tidak akan menutupi tombol menu di atas */
+    #sidebar {
+        z-index: 3000 !important; /* Pastikan Sidebar HP paling depan saat muncul */
+    }
+}
+
+.btn-icon-only {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: var(--text-muted);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-icon-only:hover {
+    background: #f1f5f9;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* 2. Logika Menyembunyikan Sidebar */
+/* Saat body punya class 'sidebar-hidden', geser sidebar ke kiri luar layar */
+body.sidebar-hidden #sidebar {
+    transform: translateX(-120%); /* Geser ke kiri sampai hilang */
+    opacity: 0; /* Biar smooth */
+}
+
+/* Geser tombol Zoom & Layer control agar tidak tertutup tombol menu */
+body.sidebar-hidden .leaflet-top.leaflet-left {
+    left: 60px; /* Beri ruang untuk tombol hamburger */
+}
+
+/* 3. Logika Menampilkan Tombol Menu (☰) di Desktop */
+/* Default-nya tombol hamburger hidden di desktop (sesuai CSS lama Anda) */
+/* TAPI, jika sidebar sembunyi, tombol hamburger HARUS muncul di desktop juga */
+body.sidebar-hidden #sidebarToggle {
+    display: block !important; /* Paksa muncul */
+    background: white;
+    color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Perbaiki posisi tombol toggle agar rapi di pojok kiri atas */
+#sidebarToggle {
+    top: 20px;
+    left: 20px;
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+    display: flex; /* Supaya icon di tengah */
+    align-items: center;
+    justify-content: center;
+    z-index: 2000; /* Di atas peta */
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Animasi hover tombol toggle */
+#sidebarToggle:hover {
+    transform: scale(1.05);
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Loading Spinner */
+.loading-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.8); z-index: 2000;
+    display: none; align-items: center; justify-content: center;
+    border-radius: var(--radius-xl); backdrop-filter: blur(4px);
+}
+.spinner {
+    width: 30px; height: 30px; border: 3px solid #e2e8f0;
+    border-top-color: var(--primary-color); border-radius: 50%;
+    animation: spin 1s infinite linear;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

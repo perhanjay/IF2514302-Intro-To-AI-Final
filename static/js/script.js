@@ -1,9 +1,42 @@
-        var map = L.map('map').setView([-1.2480, 116.8600], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        var cartoLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 19
+        });
+
+        // Peta Satelit (Esri World Imagery)
+        var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        // Peta Terrain/Topografi (OpenTopoMap)
+        var openTopoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+        });
+
+        // --- 2. INISIALISASI PETA DENGAN DEFAULT LAYER ---
+        var map = L.map('map', {
+            center: [-1.2480, 116.8600],
+            zoom: 13,
+            layers: [cartoLight], // Default layer: Carto Light
+            zoomControl: false    // Kita akan pindahkan zoom control agar tidak tertutup sidebar
+        });
+
+        // Pindahkan Zoom Control ke kanan atas agar rapi
+        L.control.zoom({
+            position: 'topright'
         }).addTo(map);
+
+        // --- 3. TAMBAHKAN LAYER CONTROL ---
+        var baseMaps = {
+            "Peta Standar": cartoLight,
+            "Satelit": esriSatellite,
+            "Terrain (Topografi)": openTopoMap
+        };
+
+        // Tambahkan kontrol ke peta (posisi kanan atas)
+        L.control.layers(baseMaps).addTo(map);
 
         var routeLayer = null;
         var markers = {};
@@ -406,3 +439,37 @@
                 }
             });
         }
+
+        // --- LOGIKA COLLAPSE SIDEBAR BARU ---
+    const collapseBtn = document.getElementById('btn-collapse-sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    const body = document.body;
+
+    // 1. Fungsi Klik Tombol "Panah Kiri" (Tutup Sidebar)
+    if(collapseBtn) {
+        collapseBtn.addEventListener('click', function() {
+            body.classList.add('sidebar-hidden');
+            // Opsional: Invalidasi ukuran peta agar merender ulang area yang tertutup
+            setTimeout(() => map.invalidateSize(), 300);
+        });
+    }
+
+    // 2. Update Fungsi Klik Tombol "Menu ☰" (Buka Sidebar)
+    // (Timpa event listener lama toggleBtn jika perlu, atau modifikasi yang ada)
+    if(toggleBtn) {
+        // Hapus event listener lama (opsional, tapi lebih aman menimpa logic manual)
+        // Kita buat logic baru yang handle Desktop & Mobile
+        toggleBtn.onclick = function() { // Gunakan onclick untuk menimpa listener lama
+            
+            // Cek apakah sedang di mode Mobile atau Desktop
+            if (window.innerWidth <= 768) {
+                // Logic Mobile Lama
+                body.classList.toggle('mobile-open');
+            } else {
+                // Logic Desktop Baru
+                body.classList.remove('sidebar-hidden');
+            }
+            
+            setTimeout(() => map.invalidateSize(), 300);
+        };
+    }

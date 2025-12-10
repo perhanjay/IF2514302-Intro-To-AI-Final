@@ -18,61 +18,79 @@
     <button id="sidebarToggle" class="toggle-btn">☰</button>
 
     <div id="sidebar">
-        <h2>🗺️ Rute Wisata Balikpapan</h2>
-        <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">Rencanakan perjalanan optimal Anda dengan algoritma cerdas.</p>
-
-        <div class="control-group">
-            <label>📂 Filter Kategori</label>
-            <select id="category-filter" class="form-select">
-                <option value="all">Semua Kategori</option>
-                </select>
-        </div>
-
-        <div class="control-group">
-            <label>📍 Titik Awal</label>
-            <select id="start-select" placeholder="Pilih lokasi awal..."></select>
-        </div>
-
-        <div class="control-group">
-            <label>🏖️ Destinasi (Maks. 6)</label>
-            <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
-        </div>
-
-        <div class="control-group">
-            <label>⚙️ Algoritma Pencarian</label>
-            <select id="algo-select" class="form-select">
-                <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
-                <option value="astar">Hanya A* (A-Star)</option>
-                <option value="dijkstra">Hanya Dijkstra</option>
-            </select>
-        </div>
-
-        <div class="blockage-panel">
-            <h4>🚧 Simulasi Gangguan</h4>
-            <div style="display: flex; gap: 10px;">
-                <button id="btn-toggle-block" class="btn-block" onclick="toggleBlockMode()">
-                    Mode Pohon Tumbang: OFF
-                </button>
-                <button id="btn-reset-block" class="btn-reset" onclick="resetBlockages()" title="Reset">
-                    🔄
+        <div class="sidebar-header">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <h2>🗺️ Rute Balikpapan</h2>
+                    <p>Rencanakan perjalanan wisata efisien Anda.</p>
+                </div>
+                <button id="btn-collapse-sidebar" class="btn-icon-only" title="Tutup Sidebar">
+                    ◀
                 </button>
             </div>
-            <p id="block-info" style="font-size: 0.8em; color: #e74c3c; margin-top: 5px; display: none;">
-                Klik pada jalan di peta untuk memblokirnya.
-            </p>
         </div>
 
+        <div class="section-group">
+            <div class="control-group">
+                <label>📂 Kategori Wisata</label>
+                <select id="category-filter" class="form-select">
+                    <option value="all">Semua Kategori</option>
+                </select>
+            </div>
 
-        <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
-        
+            <div class="control-group">
+                <label>📍 Titik Awal</label>
+                <select id="start-select" placeholder="Pilih lokasi awal..."></select>
+            </div>
+
+            <div class="control-group">
+                <label>🏖️ Destinasi (Maks. 6)</label>
+                <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
+            </div>
+
+            <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
+        </div>
+
+        <details class="advanced-options">
+            <summary>⚙️ Pengaturan & Simulasi</summary>
+            
+            <div class="details-content">
+                <div class="control-group">
+                    <label>Algoritma Pencarian</label>
+                    <select id="algo-select" class="form-select">
+                        <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
+                        <option value="astar">Hanya A* (A-Star)</option>
+                        <option value="dijkstra">Hanya Dijkstra</option>
+                    </select>
+                </div>
+
+                <div class="blockage-panel">
+                    <h4>🚧 Simulasi Gangguan</h4>
+                    <p style="font-size:0.8em; color:#64748b; margin-bottom:8px;">Klik jalan di peta untuk memblokir.</p>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-toggle-block" class="btn-block" onclick="toggleBlockMode()">
+                            Mode Blokir: OFF
+                        </button>
+                        <button id="btn-reset-block" class="btn-reset" onclick="resetBlockages()" title="Reset">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </details>
+
         <div id="loading" class="loading-overlay">
             <div class="spinner"></div>
-            <div class="loading-text">Sedang mencari rute terbaik...</div>
+            <div class="loading-text">Sedang mencari rute...</div>
         </div>
 
         <div id="result-card">
-            <h3 style="margin:0 0 15px 0; font-size:1.1rem; color:#333;">Pilihan Rute Terbaik</h3>
-            <div id="route-options-list"></div> <div id="route-details-placeholder"></div> </div>
+            <h3 style="margin:0 0 15px 0; font-size:1rem; color:#333; border-bottom:1px solid #eee; padding-bottom:8px;">
+                🏁 Hasil Perjalanan
+            </h3>
+            <div id="route-options-list"></div>
+            <div id="route-details-placeholder"></div>
+        </div>
     </div>
 
     <div id="map"></div>
