@@ -320,12 +320,57 @@
                     return { color: color, weight: 6, opacity: 0.9, lineCap: 'round' };
                 },
                 onEachFeature: function(feature, layer) {
+                    // 1. Bind Popup seperti biasa
                     layer.bindPopup(`Segmen Jalan ke-${feature.properties.segment_index + 1}`);
+
+                    // 2. Tambahkan Event Listener Klik Khusus pada Jalur
+                    layer.on('click', function(e) {
+                        if (isBlockMode) {
+                            // Stop event agar tidak lanjut ke map (mencegah double trigger)
+                            L.DomEvent.stopPropagation(e);
+                            
+                            // Tutup popup agar tidak mengganggu visual
+                            layer.closePopup();
+
+                            // Panggil fungsi blokir menggunakan koordinat titik yang diklik di jalur
+                            prosesBlokir(e.latlng.lat, e.latlng.lng);
+                        }
+                    });
                 }
             }).addTo(map);
 
             map.fitBounds(routeLayer.getBounds(), {padding: [50,50]});
         }
+
+        // --- FUNGSI BARU: Logika Pemblokiran Terpusat ---
+        function prosesBlokir(lat, lng) {
+            // Tambah marker merah visual
+            const m = L.circleMarker([lat, lng], {
+                color: 'red', fillColor: '#f03', fillOpacity: 0.8, radius: 8
+            }).addTo(map);
+            m.bindPopup("⛔ JALAN DIBLOKIR").openPopup();
+            blockedMarkers.push(m);
+
+            // Kirim ke Backend
+            fetch('/api/block_road', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({lat: lat, lon: lng})
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Blokir sukses:", data);
+                // Otomatis refresh rute jika sudah ada hasil sebelumnya
+                if (document.getElementById('result-card').style.display !== 'none') {
+                    hitungRute(); 
+                }
+            });
+        }
+
+        // Event Klik Peta (Menggunakan fungsi di atas)
+        map.on('click', function(e) {
+            if (!isBlockMode) return;
+            prosesBlokir(e.latlng.lat, e.latlng.lng);
+        });
 
         function toggleBlockMode() {
             isBlockMode = !isBlockMode;
@@ -346,33 +391,6 @@
         }
         
         // Event Klik Peta
-        map.on('click', function(e) {
-            if (!isBlockMode) return;
-        
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-        
-            // Tambah marker merah visual
-            const m = L.circleMarker([lat, lng], {
-                color: 'red', fillColor: '#f03', fillOpacity: 0.8, radius: 8
-            }).addTo(map);
-            m.bindPopup("⛔ JALAN DIBLOKIR").openPopup();
-            blockedMarkers.push(m);
-        
-            // Kirim ke Backend
-            fetch('/api/block_road', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({lat: lat, lon: lng})
-            })
-            .then(res => res.json())
-            .then(data => {
-                console.log("Blokir sukses:", data);
-                // Otomatis refresh rute jika sudah ada hasil sebelumnya
-                if (document.getElementById('result-card').style.display !== 'none') {
-                    hitungRute(); 
-                }
-            });
-        });
         
         function resetBlockages() {
             fetch('/api/reset_blocks', { method: 'POST' })
