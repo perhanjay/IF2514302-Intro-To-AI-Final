@@ -8,11 +8,11 @@ CORS(app)
 
 # 1. Load Data SEKALI SAJA saat aplikasi nyala
 # Variabel global ini akan terus hidup di memori server
-print("🚀 Menyalakan Server Flask...")
+print("Menyalakan Server Flask...")
 G_global, pois_global = backend.load_data_initial()
 
 if G_global is None:
-    print("❌ Gagal memuat data. Pastikan file .graphml dan .gpkg ada.")
+    print("Gagal memuat data. Pastikan file .graphml dan .gpkg ada.")
     exit()
 
 # 2. Route untuk Halaman Web
@@ -81,7 +81,7 @@ def api_route():
     dest_ids = req.get('dest_ids')
     mode = req.get('mode', 'astar') 
 
-    print(f"🤖 Permintaan Rute: Start={start_id}, Mode={mode}")
+    print(f"Permintaan Rute: Start={start_id}, Mode={mode}")
 
     # 3. LOGIKA PEMILIHAN MODE
     if mode == 'compare':

@@ -26,11 +26,11 @@ def add_blockage_by_coord(G, lat, lon):
             BLOCKED_EDGES.append((v, u))
             block_count += 1
 
-        print(f"🚫 [Backend] Jalan diblokir di node: {u} <-> {v}")
+        print(f"[Backend] Jalan diblokir di node: {u} <-> {v}")
         return {"status": "success", "blocked_nodes": [u, v]}
     
     except Exception as e:
-        print(f"❌ [Backend] Gagal memblokir: {e}")
+        print(f"[Backend] Gagal memblokir: {e}")
         return {"status": "error", "message": str(e)}
     
 def reset_blockages():
@@ -145,14 +145,10 @@ def load_data_initial():
     """
     Memuat data Graph dan POI ke memori. Dipanggil oleh Flask saat startup.
     """
-    print("🔄 [Backend] Memuat data graph & POI...")
+    print("[Backend] Memuat data graph & POI...")
     try:
         path_graph = "data/balikpapan_jalan.graphml"
         path_pois = "data/balikpapan_pois.gpkg"
-        
-        # Fallback jika tidak ada folder data (untuk kemudahan)
-        # if not os.path.exists(path_graph): path_graph = "balikpapan_jalan.graphml"
-        # if not os.path.exists(path_pois): path_pois = "balikpapan_pois.gpkg"
 
         G = ox.load_graphml(path_graph)
         pois = gpd.read_file(path_pois)
@@ -160,10 +156,10 @@ def load_data_initial():
         # Reset index agar kita bisa akses via ID (0, 1, 2...) dengan aman
         pois = pois.reset_index(drop=True)
         
-        print("✅ [Backend] Data berhasil dimuat.")
+        print("[Backend] Data berhasil dimuat.")
         return G, pois
     except Exception as e:
-        print(f"❌ [Backend] Error memuat data: {e}")
+        print(f"[Backend] Error memuat data: {e}")
         return None, None
 
 def get_pois_for_frontend(pois_gdf):
@@ -173,8 +169,6 @@ def get_pois_for_frontend(pois_gdf):
     if pois_gdf is None: return []
     
     results = []
-    # Filter hanya yang punya nama
-    # valid_pois = pois_gdf[pois_gdf['name'].notna()]
     valid_pois = pois_gdf
     
     for idx, row in valid_pois.iterrows():
@@ -190,12 +184,12 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
     """
     Fungsi Solver dengan Mode Perbandingan (Compare Mode).
     """
-    print(f"🚀 [Backend] Mode: {algo_mode}. Start: {start_id}, Dest: {dest_ids}")
+    print(f"[Backend] Mode: {algo_mode}. Start: {start_id}, Dest: {dest_ids}")
 
     G_active = G
 
     if BLOCKED_EDGES:
-        print(f"⚠️ [Solver] Menerapkan {len(BLOCKED_EDGES)} aturan blokir jalan...")
+        print(f"[Solver] Menerapkan {len(BLOCKED_EDGES)} aturan blokir jalan...")
         G_active = G.copy()
         for u, v in BLOCKED_EDGES:
             if G_active.has_edge(u,v):

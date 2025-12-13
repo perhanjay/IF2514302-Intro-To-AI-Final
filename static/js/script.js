@@ -411,12 +411,12 @@
             const info = document.getElementById('block-info');
                 
             if (isBlockMode) {
-                btn.innerHTML = "MODE POHON TUMBANG: ON 🌲";
+                btn.innerHTML = "MODE BLOKIR JALAN: ON";
                 btn.classList.add('active');
                 document.getElementById('map').style.cursor = "crosshair";
                 info.style.display = "block";
             } else {
-                btn.innerHTML = "Mode Pohon Tumbang: OFF";
+                btn.innerHTML = "MODE BLOKIR JALAN: OFF";
                 btn.classList.remove('active');
                 document.getElementById('map').style.cursor = "";
                 info.style.display = "none";

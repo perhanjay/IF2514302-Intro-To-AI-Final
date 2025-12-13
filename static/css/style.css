@@ -130,7 +130,7 @@ button { font-family: 'Poppins', sans-serif; cursor: pointer; transition: all 0.
     background: white; border: 1px solid #fda4af; color: #be123c;
 }
 .btn-block.active { background: #be123c; color: white; border-color: #be123c; }
-.btn-reset { width: 36px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; }
+.btn-reset { width: 36px; background: white; border: 1px solid #000000; border-radius: 6px; }
 
 /* --- RESULT CARD --- */
 #result-card {

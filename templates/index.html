@@ -48,7 +48,7 @@
                 <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
             </div>
 
-            <button id="btn-cari" onclick="hitungRute()">🚀 Cari Rute Optimal</button>
+            <button id="btn-cari" onclick="hitungRute()">Cari Rute Optimal</button>
         </div>
 
         <details class="advanced-options">
@@ -58,9 +58,9 @@
                 <div class="control-group">
                     <label>Algoritma Pencarian</label>
                     <select id="algo-select" class="form-select">
-                        <option value="compare" selected>🔄 Bandingkan (A* vs Dijkstra)</option>
-                        <option value="astar">Hanya A* (A-Star)</option>
-                        <option value="dijkstra">Hanya Dijkstra</option>
+                        <option value="compare">A-Star vs Dijkstra</option>
+                        <option value="astar" selected>A-Star</option>
+                        <option value="dijkstra">Dijkstra</option>
                     </select>
                 </div>
 
@@ -69,7 +69,7 @@
                     <p style="font-size:0.8em; color:#64748b; margin-bottom:8px;">Klik jalan di peta untuk memblokir.</p>
                     <div style="display: flex; gap: 10px;">
                         <button id="btn-toggle-block" class="btn-block" onclick="toggleBlockMode()">
-                            Mode Blokir: OFF
+                            MODE BLOKIR JALAN: OFF
                         </button>
                         <button id="btn-reset-block" class="btn-reset" onclick="resetBlockages()" title="Reset">
                             🔄
