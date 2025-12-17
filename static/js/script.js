@@ -494,7 +494,7 @@
 
             // 3. Render HTML Tabel
             container.innerHTML = `
-                <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">🆚 Hasil Benchmark:</div>
+                <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">Hasil Benchmark:</div>
                 <table class="compare-table">
                     <thead>
                         <tr>
@@ -522,7 +522,7 @@
                     </tbody>
                 </table>
                 <div style="margin-top:15px; font-size:0.85em; color:#555; background:#e8f4f8; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
-                    💡 <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
+                    <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
                 </div>
             `;
             

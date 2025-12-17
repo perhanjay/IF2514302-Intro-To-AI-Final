@@ -21,7 +21,7 @@
         <div class="sidebar-header">
             <div style="display: flex; justify-content: space-between; align-items: start;">
                 <div>
-                    <h2>🗺️ Rute Balikpapan</h2>
+                    <h2>Rute Balikpapan</h2>
                     <p>Rencanakan perjalanan wisata efisien Anda.</p>
                 </div>
                 <button id="btn-collapse-sidebar" class="btn-icon-only" title="Tutup Sidebar">
@@ -32,30 +32,20 @@
 
         <div class="section-group">
             <div class="control-group">
-                <label>📂 Kategori Wisata</label>
+                <label>Kategori Wisata</label>
                 <select id="category-filter" class="form-select">
                     <option value="all">Semua Kategori</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label>📍 Titik Awal</label>
+                <label>Titik Awal</label>
                 <select id="start-select" placeholder="Pilih lokasi awal..."></select>
             </div>
 
             <div class="control-group">
-                <label>🏖️ Destinasi (Maks. 6)</label>
+                <label>Destinasi (Maks. 6)</label>
                 <select id="dest-select" multiple placeholder="Klik peta atau cari..."></select>
-            </div>
-
-            <div class="control-group" style="margin-bottom: 15px;">
-                <label style="cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 500;">
-                    <input type="checkbox" id="toggle-animation" style="transform: scale(1.2);">
-                    <span>🎬 Aktifkan Visualisasi Algoritma</span>
-                </label>
-                <small style="color: #666; font-size: 0.85em; display: block; margin-top: 5px;">
-                    Lihat bagaimana AI "berpikir" mencari jalan.
-                </small>
             </div>
 
             <button id="btn-cari" onclick="hitungRute()">Cari Rute Optimal</button>
@@ -74,8 +64,15 @@
                     </select>
                 </div>
 
+            <div class="details-content">
+                <label style="cursor: pointer; display: flex; align-items: center; gap: 10px; font-weight: 300;">
+                    <input type="checkbox" id="toggle-animation" style="transform: scale(1.2);">
+                    <span>Aktifkan Visualisasi Algoritma</span>
+                </label>
+            </div>
+
                 <div class="blockage-panel">
-                    <h4>🚧 Simulasi Gangguan</h4>
+                    <h4>Simulasi Gangguan</h4>
                     <p style="font-size:0.8em; color:#64748b; margin-bottom:8px;">Klik jalan di peta untuk memblokir.</p>
                     <div style="display: flex; gap: 10px;">
                         <button id="btn-toggle-block" class="btn-block" onclick="toggleBlockMode()">
@@ -96,7 +93,7 @@
 
         <div id="result-card">
             <h3 style="margin:0 0 15px 0; font-size:1rem; color:#333; border-bottom:1px solid #eee; padding-bottom:8px;">
-                🏁 Hasil Perjalanan
+                Hasil Perjalanan
             </h3>
             <div id="route-options-list"></div>
             <div id="route-details-placeholder"></div>
