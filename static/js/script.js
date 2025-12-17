@@ -39,6 +39,7 @@
         L.control.layers(baseMaps).addTo(map);
 
         var routeLayer = null;
+        var animationLayer = L.layerGroup().addTo(map);
         var markers = {};
         var globalPois = {}; 
         var currentRouteData = null;
@@ -185,6 +186,11 @@
             var destIds = tsDest.getValue();
             var mode = document.getElementById('algo-select').value;
 
+            // Cek status checkbox animasi
+            var useAnimation = false;
+            var toggleEl = document.getElementById('toggle-animation');
+            if (toggleEl) useAnimation = toggleEl.checked;
+
             if (!startId || destIds.length === 0) {
                 alert("Pilih minimal 1 titik awal dan 1 destinasi!");
                 return;
@@ -193,6 +199,9 @@
             document.getElementById('loading').style.display = 'flex';
             document.getElementById('result-card').style.display = 'none';
             if(routeLayer) map.removeLayer(routeLayer);
+            
+            // [PENTING] Reset layer animasi di sini, sebelum mulai apapun
+            if(typeof animationLayer !== 'undefined') animationLayer.clearLayers();
 
             fetch('/api/route', {
                 method: 'POST',
@@ -209,60 +218,46 @@
                 
                 if (data.error) { alert("Error: " + data.error); return; }
 
-                document.getElementById('result-card').style.display = 'block';
-                var container = document.getElementById('route-options-list');
-                var details = document.getElementById('route-details-placeholder');
-
+                // --- LOGIKA UTAMA ---
                 if (data.mode === 'compare') {
-                    // MODE BANDINGKAN
-                    var astar = data.astar;
-                    var dijkstra = data.dijkstra;
-                    
-                    tampilkanPeta(astar);
+                    // == MODE COMPARE (MERAH vs BIRU) ==
+                    var astarData = data.astar;
+                    var dijkstraData = data.dijkstra;
 
-                    var aTime = astar.stats.time_ms;
-                    var dTime = dijkstra.stats.time_ms;
-                    var aNodes = astar.stats.nodes_visited;
-                    var dNodes = dijkstra.stats.nodes_visited;
+                    if (useAnimation && typeof playSearchAnimation === 'function') {
+                        // Jalankan KEDUANYA secara paralel
+                        // Dijkstra = Merah (#e74c3c), A* = Biru (#3498db)
+                        
+                        var p1 = playSearchAnimation(dijkstraData.visited_coords, '#e74c3c'); 
+                        var p2 = playSearchAnimation(astarData.visited_coords, '#3498db');
 
-                    container.innerHTML = `
-                        <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">🆚 Hasil Benchmark:</div>
-                        <table class="compare-table">
-                            <thead>
-                                <tr>
-                                    <th>Metrik</th>
-                                    <th>A* (Smart)</th>
-                                    <th>Dijkstra (Blind)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>Total Jarak</td>
-                                    <td>${astar.total_km} km</td>
-                                    <td>${dijkstra.total_km} km</td>
-                                </tr>
-                                <tr>
-                                    <td>Waktu (Server)</td>
-                                    <td class="${aTime <= dTime ? 'winner' : ''}">${aTime} ms</td>
-                                    <td class="${dTime < aTime ? 'winner' : ''}">${dTime} ms</td>
-                                </tr>
-                                <tr>
-                                    <td>Efisiensi<br><small>(Nodes Dicek)</small></td>
-                                    <td class="${aNodes <= dNodes ? 'winner' : ''}">${aNodes}</td>
-                                    <td class="${dNodes < aNodes ? 'winner' : ''}">${dNodes}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div style="margin-top:15px; font-size:0.85em; color:#555; background:#e8f4f8; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
-                            💡 <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
-                        </div>
-                    `;
-                    details.innerHTML = ''; 
+                        // Tunggu sampai KEDUANYA selesai, baru munculkan tabel data
+                        Promise.all([p1, p2]).then(() => {
+                            document.getElementById('result-card').style.display = 'block';
+                            renderCompareResult(data);
+                        });
+
+                    } else {
+                        // Jika animasi mati, langsung muncul
+                        document.getElementById('result-card').style.display = 'block';
+                        renderCompareResult(data);
+                    }
 
                 } else {
-                    // MODE BIASA (Single Route / Alternatif)
+                    // == MODE SINGLE / ALTERNATIF ==
                     currentRoutesList = data.routes;
-                    pilihRuteOtomatis(data.routes[0]);
+                    var bestRoute = data.routes[0];
+
+                    if (useAnimation && bestRoute.visited_coords && typeof playSearchAnimation === 'function') {
+                        // Animasi Biru (#3498db) untuk mode biasa
+                        playSearchAnimation(bestRoute.visited_coords, '#3498db').then(() => {
+                            document.getElementById('result-card').style.display = 'block';
+                            pilihRuteOtomatis(bestRoute);
+                        });
+                    } else {
+                        document.getElementById('result-card').style.display = 'block';
+                        pilihRuteOtomatis(bestRoute);
+                    }
                 }
                 
                 if(window.innerWidth <= 768) document.body.classList.remove('mobile-open');
@@ -273,6 +268,8 @@
                 alert("Gagal menghubungi server.");
             });
         }
+
+
         function pilihRuteOtomatis(route) {
             currentRouteData = route; 
             renderRouteButtons(currentRoutesList, route.rank); 
@@ -439,6 +436,100 @@
                 }
             });
         }
+
+    
+        // [UPDATE] Fungsi Animasi dengan Warna & Promise
+        function playSearchAnimation(coordList, colorHex) {
+            return new Promise((resolve) => {
+                if (!coordList || coordList.length === 0) {
+                    resolve();
+                    return;
+                }
+
+                const batchSize = 50; // Jumlah titik per frame
+                let index = 0;
+
+                function drawBatch() {
+                    for (let i = 0; i < batchSize; i++) {
+                        if (index >= coordList.length) {
+                            resolve(); // Selesai!
+                            return;
+                        }
+
+                        const latlng = coordList[index];
+                        
+                        L.circleMarker(latlng, {
+                            radius: 4,
+                            fillColor: colorHex, // Gunakan warna parameter
+                            fillOpacity: 0.6,
+                            stroke: false,
+                            interactive: false
+                        }).addTo(animationLayer);
+
+                        index++;
+                    }
+                    requestAnimationFrame(drawBatch);
+                }
+
+                drawBatch();
+            });
+        }
+                
+        // --- [BARU] Helper Function untuk Render Tabel Compare ---
+        function renderCompareResult(data) {
+            var container = document.getElementById('route-options-list');
+            var details = document.getElementById('route-details-placeholder');
+            
+            var astar = data.astar;
+            var dijkstra = data.dijkstra;
+
+            // 1. Tampilkan Peta (Gunakan rute A* sebagai visual utama)
+            tampilkanPeta(astar);
+
+            // 2. Ambil Statistik
+            var aTime = astar.stats.time_ms;
+            var dTime = dijkstra.stats.time_ms;
+            var aNodes = astar.stats.nodes_visited;
+            var dNodes = dijkstra.stats.nodes_visited;
+
+            // 3. Render HTML Tabel
+            container.innerHTML = `
+                <div style="margin-bottom:10px; font-weight:bold; color:#2c3e50;">🆚 Hasil Benchmark:</div>
+                <table class="compare-table">
+                    <thead>
+                        <tr>
+                            <th>Metrik</th>
+                            <th>A* (Smart)</th>
+                            <th>Dijkstra (Blind)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Jarak</td>
+                            <td>${astar.total_km} km</td>
+                            <td>${dijkstra.total_km} km</td>
+                        </tr>
+                        <tr>
+                            <td>Waktu (Server)</td>
+                            <td class="${aTime <= dTime ? 'winner' : ''}">${aTime} ms</td>
+                            <td class="${dTime < aTime ? 'winner' : ''}">${dTime} ms</td>
+                        </tr>
+                        <tr>
+                            <td>Efisiensi<br><small>(Nodes Dicek)</small></td>
+                            <td class="${aNodes <= dNodes ? 'winner' : ''}">${aNodes}</td>
+                            <td class="${dNodes < aNodes ? 'winner' : ''}">${dNodes}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:15px; font-size:0.85em; color:#555; background:#e8f4f8; padding:10px; border-radius:6px; border-left:4px solid #3498db;">
+                    💡 <b>Analisa:</b> Algoritma A* memeriksa <b>${Math.round(dNodes/aNodes)}x lebih sedikit</b> titik persimpangan dibandingkan Dijkstra untuk menemukan rute yang sama.
+                </div>
+            `;
+            
+            // Kosongkan detail rute step-by-step karena fokus di tabel
+            details.innerHTML = ''; 
+        }
+
 
         // --- LOGIKA COLLAPSE SIDEBAR BARU ---
     const collapseBtn = document.getElementById('btn-collapse-sidebar');

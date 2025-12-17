@@ -62,10 +62,20 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
     came_from = {}
     g_score = defaultdict(lambda: float('inf'))
     g_score[source] = 0
+    visited_order = []
 
     while open_set:
         _current_f_score, current = heapq.heappop(open_set)
         nodes_visited_count += 1  # <--- Hitung node yang dicek
+        if current in G.nodes:
+            nd = G.nodes[current]
+            visited_order.append([nd['y'], nd['x']])
+
+        if current == target:
+            path = reconstruct_path(current)
+            total_length = g_score[target]
+            # [UBAH] Return tambah visited_order di paling belakang
+            return total_length, path, nodes_visited_count, visited_order
 
         if current == target:
             path = reconstruct_path(current)
@@ -89,7 +99,7 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
                 f_score = tentative_g_score + heuristic_func(neighbor, target, G)
                 heapq.heappush(open_set, (f_score, neighbor))
     
-    return float('inf'), [], nodes_visited_count
+    return float('inf'), [], nodes_visited_count, []
 
 def permutations(elements):
     """
@@ -224,7 +234,7 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
                 if u == v:
                     distances[u][v] = 0; continue
                 
-                length, path, visited = my_astar(G_active, u, v, heuristic_func)
+                length, path, visited, _ = my_astar(G_active, u, v, heuristic_func)
                 distances[u][v] = length if path else float('inf')
                 total_nodes_visited += visited
 
@@ -254,11 +264,14 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         full_poi_path = [start_id] + list(best_route['order'])
         
         full_node_path = [] # <--- TAMBAHAN PENTING 1
+        all_visited_log = []
         
         for i in range(len(full_poi_path) - 1):
             u_node = poi_to_node[full_poi_path[i]]
             v_node = poi_to_node[full_poi_path[i+1]]
-            _, seg_path, _ = my_astar(G_active, u_node, v_node, heuristic_func)
+            _, seg_path, _, seg_visited = my_astar(G_active, u_node, v_node, heuristic_func)
+            if seg_visited:
+                all_visited_log.extend(seg_visited)
             
             if seg_path:
                 full_node_path.extend(seg_path) # <--- TAMBAHAN PENTING 2
@@ -276,7 +289,8 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
             "sequence_ids": path_seq,
             "geojson": {"type": "FeatureCollection", "features": features},
             "stats": {"time_ms": round(execution_time, 2), "nodes_visited": total_nodes_visited},
-            "full_nodes": full_node_path # <--- TAMBAHAN PENTING 3 (Agar bisa diakses fungsi alternatif)
+            "full_nodes": full_node_path,
+            "visited_coords": all_visited_log # <--- TAMBAHAN PENTING 3 (Agar bisa diakses fungsi alternatif)
         }
 
     # --- LOGIKA UTAMA ---
