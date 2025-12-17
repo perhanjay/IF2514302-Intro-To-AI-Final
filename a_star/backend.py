@@ -282,6 +282,10 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
                     "geometry": {"type": "LineString", "coordinates": coords}
                 })
         
+        if len(all_visited_log) > 5000:
+            print(f"[Backend] Downsampling visualisasi dari {len(all_visited_log)} titik...")
+            all_visited_log = all_visited_log[::5] # Ambil setiap titik ke-5 (skip 4 titik)
+        
         execution_time = (time.time() - start_time) * 1000 # ms
         
         return {
@@ -290,7 +294,7 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
             "geojson": {"type": "FeatureCollection", "features": features},
             "stats": {"time_ms": round(execution_time, 2), "nodes_visited": total_nodes_visited},
             "full_nodes": full_node_path,
-            "visited_coords": all_visited_log # <--- TAMBAHAN PENTING 3 (Agar bisa diakses fungsi alternatif)
+            "visited_coords": all_visited_log # <--- Data yang dikirim sudah lebih ringan
         }
 
     # --- LOGIKA UTAMA ---
