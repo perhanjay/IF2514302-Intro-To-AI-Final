@@ -8,18 +8,10 @@ main
 ├── data
 │   ├── balikpapan_jalan.graphml
 │   └── balikpapan_pois.gpkg
-├── data_web
-│   ├── jalan_balikpapan.geojson
-│   └── poi_balikpapan.geojson
 ├── out
 │   └── rute_optimal_final.geojson
 ├── index.html
 └── README.md
 ```
-- Data: Used for geographic data processing inside the algorithm
-- data_web: Used for geographic data processing used by leaflet.js
+- Data: Used for geographic data processing inside the algorithm, process it to 
 - out: folder outputting the final route
-
-database histroy pake sql guys.
-tambahin tiga rute alternatif. 
-okesip.

@@ -9,9 +9,7 @@ from collections import defaultdict
 BLOCKED_EDGES = []
 
 def add_blockage_by_coord(G, lat, lon):
-    """
-    ### BARU: Menerima lat/lon, mencari edge terdekat, dan menyimpannya ke memori.
-    """
+    #Main Logic blokir jalan
 
     try:
         u,v,key = ox.nearest_edges(G, X=lon, Y=lat)
@@ -26,7 +24,7 @@ def add_blockage_by_coord(G, lat, lon):
             BLOCKED_EDGES.append((v, u))
             block_count += 1
 
-        print(f"[Backend] Jalan diblokir di node: {u} <-> {v}")
+        print(f"Jalan diblokir di node: {u} dan {v}")
         return {"status": "success", "blocked_nodes": [u, v]}
     
     except Exception as e:
@@ -34,18 +32,14 @@ def add_blockage_by_coord(G, lat, lon):
         return {"status": "error", "message": str(e)}
     
 def reset_blockages():
-    """RESET ALL BLOCKAGES"""
     global BLOCKED_EDGES
     BLOCKED_EDGES = []
     print("Semua Blokiran dihapus.")
     return {"status": "success"}
 
 
-def my_astar(G, source, target, heuristic_func, weight='length'):
-    """
-    Implementasi A* Generik (Bisa jadi Dijkstra jika heuristic_func return 0).
-    Mengembalikan: (total_length, path, nodes_visited_count)
-    """
+def astar(G, source, target, heuristic_func, weight='length'):
+    # LOGIC A-STAR
     def reconstruct_path(current):
         path = [current]
         while current in came_from:
@@ -66,7 +60,7 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
 
     while open_set:
         _current_f_score, current = heapq.heappop(open_set)
-        nodes_visited_count += 1  # <--- Hitung node yang dicek
+        nodes_visited_count += 1 
         if current in G.nodes:
             nd = G.nodes[current]
             visited_order.append([nd['y'], nd['x']])
@@ -74,7 +68,6 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
         if current == target:
             path = reconstruct_path(current)
             total_length = g_score[target]
-            # [UBAH] Return tambah visited_order di paling belakang
             return total_length, path, nodes_visited_count, visited_order
 
         if current == target:
@@ -102,9 +95,6 @@ def my_astar(G, source, target, heuristic_func, weight='length'):
     return float('inf'), [], nodes_visited_count, []
 
 def permutations(elements):
-    """
-    Implementasi Permutasi manual (Recursive).
-    """
     if len(elements) == 1:
         return [elements]
     
@@ -118,9 +108,6 @@ def permutations(elements):
     return result
 
 def heuristic_dist(u, v, G):
-    """
-    Implementasi Haversine manual.
-    """
     node_u_data = G.nodes[u]
     node_v_data = G.nodes[v]
 
@@ -132,7 +119,6 @@ def heuristic_dist(u, v, G):
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
 
-    # Rumus Haversine
     a = (math.sin(delta_phi / 2) ** 2 +
             math.cos(phi1) * math.cos(phi2) *
             math.sin(delta_lambda / 2) ** 2)
@@ -145,17 +131,11 @@ def heuristic_dist(u, v, G):
     return distance
 
 def heuristic_zero(u, v, G):
-    """
-    Heuristik untuk Dijkstra. Selalu mengembalikan 0.
-    Ini membuat A* berubah sifat menjadi Dijkstra murni (Blind Search).
-    """
+    #HEURISTIC UNTUK DIJKSTRA
     return 0
 
 def load_data_initial():
-    """
-    Memuat data Graph dan POI ke memori. Dipanggil oleh Flask saat startup.
-    """
-    print("[Backend] Memuat data graph & POI...")
+    print("Memuat data graph & POI...")
     try:
         path_graph = "data/balikpapan_jalan.graphml"
         path_pois = "data/balikpapan_pois.gpkg"
@@ -163,19 +143,14 @@ def load_data_initial():
         G = ox.load_graphml(path_graph)
         pois = gpd.read_file(path_pois)
         
-        # Reset index agar kita bisa akses via ID (0, 1, 2...) dengan aman
         pois = pois.reset_index(drop=True)
         
-        print("[Backend] Data berhasil dimuat.")
         return G, pois
     except Exception as e:
-        print(f"[Backend] Error memuat data: {e}")
+        print(f"Error memuat data: {e}")
         return None, None
 
 def get_pois_for_frontend(pois_gdf):
-    """
-    Mengubah GeoDataFrame POI menjadi list dictionary sederhana untuk Dropdown UI.
-    """
     if pois_gdf is None: return []
     
     results = []
@@ -183,7 +158,7 @@ def get_pois_for_frontend(pois_gdf):
     
     for idx, row in valid_pois.iterrows():
         results.append({
-            "id": int(idx), # Index dataframe sebagai ID unik
+            "id": int(idx),
             "name": row['name'],
             "lat": row.geometry.y,
             "lon": row.geometry.x
@@ -191,26 +166,21 @@ def get_pois_for_frontend(pois_gdf):
     return results
 
 def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
-    """
-    Fungsi Solver dengan Mode Perbandingan (Compare Mode).
-    """
-    print(f"[Backend] Mode: {algo_mode}. Start: {start_id}, Dest: {dest_ids}")
+    print(f"Mode: {algo_mode}. Start: {start_id}, Dest: {dest_ids}")
 
     G_active = G
 
     if BLOCKED_EDGES:
-        print(f"[Solver] Menerapkan {len(BLOCKED_EDGES)} aturan blokir jalan...")
+        print(f"Menerapkan {len(BLOCKED_EDGES)} aturan blokir jalan...")
         G_active = G.copy()
         for u, v in BLOCKED_EDGES:
             if G_active.has_edge(u,v):
                 G_active.remove_edge(u, v)
     
-    # --- HELPER: Jalankan TSP untuk satu jenis algoritma ---
     def run_tsp(heuristic_func):
         start_time = time.time()
         total_nodes_visited = 0
         
-        # 1. Snap & Matriks Jarak
         start_point = pois.iloc[start_id].geometry
         dest_points = pois.iloc[dest_ids].geometry
         all_points = [start_point] + list(dest_points)
@@ -220,25 +190,22 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         start_node = all_nodes[0]
         dest_nodes = all_nodes[1:]
         
-        # Mapping POI ID -> NODE ID
         poi_to_node = {start_id: start_node}
         for pid, nid in zip(dest_ids, dest_nodes): poi_to_node[pid] = nid
             
         distances = {}
         nodes_to_calc = [start_node] + dest_nodes
         
-        # 2. Hitung Matriks Jarak
         for u in nodes_to_calc:
             distances[u] = {}
             for v in nodes_to_calc:
                 if u == v:
                     distances[u][v] = 0; continue
                 
-                length, path, visited, _ = my_astar(G_active, u, v, heuristic_func)
+                length, path, visited, _ = astar(G_active, u, v, heuristic_func)
                 distances[u][v] = length if path else float('inf')
                 total_nodes_visited += visited
 
-        # 3. TSP Permutasi
         all_candidates = []
         for p in permutations(dest_ids):
             current_dist = 0
@@ -254,27 +221,25 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         
         if not all_candidates: return None
 
-        # Ambil terbaik
         all_candidates.sort(key=lambda x: x['total_dist'])
         best_route = all_candidates[0]
         
-        # 4. Rekonstruksi GeoJSON & Full Node Path
         features = []
         path_seq = [start_id] + list(best_route['order'])
         full_poi_path = [start_id] + list(best_route['order'])
         
-        full_node_path = [] # <--- TAMBAHAN PENTING 1
+        full_node_path = []
         all_visited_log = []
         
         for i in range(len(full_poi_path) - 1):
             u_node = poi_to_node[full_poi_path[i]]
             v_node = poi_to_node[full_poi_path[i+1]]
-            _, seg_path, _, seg_visited = my_astar(G_active, u_node, v_node, heuristic_func)
+            _, seg_path, _, seg_visited = astar(G_active, u_node, v_node, heuristic_func)
             if seg_visited:
                 all_visited_log.extend(seg_visited)
             
             if seg_path:
-                full_node_path.extend(seg_path) # <--- TAMBAHAN PENTING 2
+                full_node_path.extend(seg_path)
                 coords = [[G_active.nodes[n]['x'], G_active.nodes[n]['y']] for n in seg_path]
                 features.append({
                     "type": "Feature",
@@ -283,10 +248,10 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
                 })
         
         if len(all_visited_log) > 5000:
-            print(f"[Backend] Downsampling visualisasi dari {len(all_visited_log)} titik...")
-            all_visited_log = all_visited_log[::5] # Ambil setiap titik ke-5 (skip 4 titik)
+            print(f"Downsampling visualisasi dari {len(all_visited_log)} titik...")
+            all_visited_log = all_visited_log[::5]
         
-        execution_time = (time.time() - start_time) * 1000 # ms
+        execution_time = (time.time() - start_time) * 1000
         
         return {
             "total_km": round(best_route['total_dist'] / 1000, 2),
@@ -294,13 +259,11 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
             "geojson": {"type": "FeatureCollection", "features": features},
             "stats": {"time_ms": round(execution_time, 2), "nodes_visited": total_nodes_visited},
             "full_nodes": full_node_path,
-            "visited_coords": all_visited_log # <--- Data yang dikirim sudah lebih ringan
+            "visited_coords": all_visited_log
         }
 
-    # --- LOGIKA UTAMA ---
     try:
         if algo_mode == 'compare':
-            # Mode Compare tetap sama
             res_astar = run_tsp(heuristic_dist)
             res_dijkstra = run_tsp(heuristic_zero)
             
@@ -313,8 +276,6 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
                 "dijkstra": res_dijkstra
             }
         else:
-            # Mode Single sekarang hanya mengembalikan dict biasa
-            # Nanti fungsi wrapper yang akan mengurus list-nya
             func = heuristic_zero if algo_mode == 'dijkstra' else heuristic_dist
             result = run_tsp(func)
             
@@ -327,63 +288,44 @@ def solve_tour(G, pois, start_id, dest_ids, algo_mode='astar'):
         return {"error": str(e)}
 
 def get_alternative_routes(G, pois, start_id, dest_ids, mode='astar', k=3):
-    """
-    Mencari 3 rute alternatif dengan memberi penalti pada jalan yang sudah dilewati.
-    """
     results = []
-    G_temp = G.copy() # Copy agar graph asli tidak rusak
+    G_temp = G.copy()
 
     if BLOCKED_EDGES:
         for u, v in BLOCKED_EDGES:
             if G_temp.has_edge(u, v): G_temp.remove_edge(u, v) 
 
-    penalty_factor = 2.0 # Bobot hukuman (semakin besar, semakin 'menghindar')
+    penalty_factor = 2.0
 
-    print(f"🔄 [Backend] Mencari {k} alternatif rute...")
+    print(f"Mencari {k} alternatif rute...")
 
     for i in range(k):
-        # Panggil solve_tour
         res = solve_tour(G_temp, pois, start_id, dest_ids, mode)
-        
-        # Cek validitas hasil
+
         if not res or "error" in res:
             break
-            
-        # Tambahkan ranking untuk UI
+
         res['rank'] = i + 1
         results.append(res)
-        
-        # LOGIKA PENALTI: Hanya jalan jika kita butuh rute berikutnya (i < k-1)
-        # Dan pastikan 'full_nodes' ada di hasil (dari update solve_tour tadi)
+
         if i < k - 1 and 'full_nodes' in res:
             path_nodes = res['full_nodes']
-            # Loop setiap pasang node dalam rute
             for j in range(len(path_nodes) - 1):
                 u, v = path_nodes[j], path_nodes[j+1]
                 
-                # Jika edge ada di graph temp, kalikan bobotnya
                 if G_temp.has_edge(u, v):
-                    # NetworkX MultiGraph menyimpan edge dalam dict key (biasanya 0)
                     for key in G_temp[u][v]:
                         current_len = G_temp[u][v][key].get('length', 0)
                         G_temp[u][v][key]['length'] = current_len * penalty_factor
                         
     return results
 
-# ==========================================
-# 3. MAIN (UNTUK TESTING MANUAL)
-# ==========================================
-
+# DEBUGGER TEST MANUAL
 def main():
-    """
-    Fungsi ini tetap ada agar kamu bisa run 'python backend.py' di terminal
-    tanpa menyalakan server Flask, untuk debugging.
-    """
     print("--- MODE MANUAL (DEBUG) ---")
     G, pois = load_data_initial()
     if G is None: return
 
-    # Simulasi input
     start_name = "Alfamidi Ahmad Yani" 
     dest_names = [
         "Warung Tudai - Sumber Rejo",
@@ -394,12 +336,10 @@ def main():
     
     print(f"Mencari rute dari {start_name} ke {len(dest_names)} tujuan...")
     
-    # Cari ID dari nama (manual lookup)
     try:
         start_id = pois[pois['name'] == start_name].index[0]
         dest_ids = pois[pois['name'].isin(dest_names)].index.tolist()
         
-        # Panggil fungsi solver kita
         result = solve_tour(G, pois, int(start_id), dest_ids)
         
         if "error" in result:
@@ -407,7 +347,6 @@ def main():
         else:
             print("--- SUKSES ---")
             print(f"Total Jarak: {result['total_km']} km")
-            # Simpan ke file jika run manual
             with open("manual_result.geojson", "w") as f:
                 json.dump(result['geojson'], f)
             print("Disimpan ke 'manual_result.geojson'")
